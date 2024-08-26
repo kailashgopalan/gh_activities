@@ -1,13 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort
 from authlib.integrations.flask_client import OAuth
 from datetime import datetime, timedelta
-import sqlite3
+import os
+import psycopg2
+from psycopg2.extras import DictCursor
+from urllib.parse import urlparse
 from collections import Counter, defaultdict
 from dotenv import load_dotenv
-import os
 from openai import OpenAI
 from functools import wraps
-from urllib.parse import urlparse
 
 load_dotenv()
 
@@ -29,6 +30,47 @@ google = oauth.register(
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
+# Database setup
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sqlite_path = os.path.join(BASE_DIR, 'activities.db')
+DATABASE_URL = os.environ.get('DATABASE_URL', f'sqlite:///{sqlite_path}')
+
+def get_db_connection():
+    global DATABASE_URL
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    
+    url = urlparse(DATABASE_URL)
+    if url.scheme == 'sqlite':
+        import sqlite3
+        db_path = url.path[1:] if url.path.startswith('/') else url.path
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+    else:
+        conn = psycopg2.connect(
+            dbname=url.path[1:],
+            user=url.username,
+            password=url.password,
+            host=url.hostname,
+            port=url.port
+        )
+        conn.cursor_factory = DictCursor
+    return conn
+
+def init_db():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''CREATE TABLE IF NOT EXISTS activities
+                   (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    activity TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    hours REAL NOT NULL)''')
+    conn.commit()
+    cur.close()
+    conn.close()
+
 def classify_activity(activity):
     try:
         response = client.chat.completions.create(
@@ -43,54 +85,39 @@ def classify_activity(activity):
         print(f"Error in classification: {e}")
         return 'other'
 
-
-def get_db_connection():
-    database_url = os.getenv('DATABASE_URL')
-    if database_url:
-        url = urlparse(database_url)
-        db_path = url.path[1:]
-    else:
-        db_path = 'activities.db'
-    
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
-def init_db():
-    conn = get_db_connection()
-    conn.execute('''CREATE TABLE IF NOT EXISTS activities
-                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                     user_id TEXT NOT NULL,
-                     date TEXT NOT NULL,
-                     activity TEXT NOT NULL,
-                     category TEXT NOT NULL,
-                     hours REAL NOT NULL)''')
-    conn.close()
-
-init_db()
-
 def get_activities(user_id, date):
     conn = get_db_connection()
-    activities = conn.execute('SELECT * FROM activities WHERE user_id = ? AND date = ? ORDER BY id DESC', (user_id, date)).fetchall()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM activities WHERE user_id = ? AND date = ? ORDER BY id DESC', (user_id, date))
+    activities = cur.fetchall()
+    cur.close()
     conn.close()
     return [dict(activity) for activity in activities]
 
 def add_activity(user_id, date, activity, category, hours):
     conn = get_db_connection()
-    conn.execute('INSERT INTO activities (user_id, date, activity, category, hours) VALUES (?, ?, ?, ?, ?)',
+    cur = conn.cursor()
+    cur.execute('INSERT INTO activities (user_id, date, activity, category, hours) VALUES (?, ?, ?, ?, ?)',
                  (user_id, date, activity, category, hours))
     conn.commit()
+    cur.close()
     conn.close()
 
 def update_activity(activity_id, user_id, date, activity, category, hours):
     conn = get_db_connection()
-    conn.execute('UPDATE activities SET date = ?, activity = ?, category = ?, hours = ? WHERE id = ? AND user_id = ?',
+    cur = conn.cursor()
+    cur.execute('UPDATE activities SET date = ?, activity = ?, category = ?, hours = ? WHERE id = ? AND user_id = ?',
                  (date, activity, category, hours, activity_id, user_id))
     conn.commit()
+    cur.close()
     conn.close()
 
 def get_activity(activity_id, user_id):
     conn = get_db_connection()
-    activity = conn.execute('SELECT * FROM activities WHERE id = ? AND user_id = ?', (activity_id, user_id)).fetchone()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM activities WHERE id = ? AND user_id = ?', (activity_id, user_id))
+    activity = cur.fetchone()
+    cur.close()
     conn.close()
     return dict(activity) if activity else None
 
@@ -99,8 +126,11 @@ def generate_grid_data(user_id):
     start_date = today - timedelta(days=364)
     
     conn = get_db_connection()
-    activities = conn.execute('SELECT * FROM activities WHERE user_id = ? AND date >= ?', 
-                              (user_id, start_date.isoformat())).fetchall()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM activities WHERE user_id = ? AND date >= ?', 
+                              (user_id, start_date.isoformat()))
+    activities = cur.fetchall()
+    cur.close()
     conn.close()
 
     date_activities = defaultdict(list)
@@ -207,12 +237,15 @@ def admin_query():
     if request.method == 'POST':
         query = request.form.get('query')
         conn = get_db_connection()
+        cur = conn.cursor()
         try:
-            results = conn.execute(query).fetchall()
+            cur.execute(query)
+            results = cur.fetchall()
             return render_template('admin_query.html', results=results, query=query)
-        except sqlite3.Error as e:
+        except Exception as e:
             return render_template('admin_query.html', error=str(e), query=query)
         finally:
+            cur.close()
             conn.close()
     return render_template('admin_query.html')
 
@@ -220,5 +253,11 @@ def admin_query():
 def forbidden(e):
     return render_template('403.html'), 403
 
+@app.cli.command("init-db")
+def init_db_command():
+    init_db()
+    print("Initialized the database.")
+
 if __name__ == '__main__':
+    init_db()
     app.run(debug=True)
