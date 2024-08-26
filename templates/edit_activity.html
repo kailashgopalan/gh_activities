@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Activity</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Edit Activity</h1>
+        <form method="POST">
+            <input type="text" name="activity" value="{{ activity.activity }}" required>
+            <select name="category">
+                <option value="">Auto-classify</option>
+                <option value="fitness" {% if activity.category == 'fitness' %}selected{% endif %}>Fitness 🏋️</option>
+                <option value="reading" {% if activity.category == 'reading' %}selected{% endif %}>Reading 📚</option>
+                <option value="housework" {% if activity.category == 'housework' %}selected{% endif %}>House Work 🧹</option>
+                <option value="drive" {% if activity.category == 'drive' %}selected{% endif %}>Drive 🚗</option>
+                <option value="cooking" {% if activity.category == 'cooking' %}selected{% endif %}>Cooking 👨‍🍳</option>
+                <option value="other" {% if activity.category == 'other' %}selected{% endif %}>Other 🔹</option>
+            </select>
+            <input type="number" name="hours" step="0.5" min="0" max="24" value="{{ activity.hours }}" required>
+            <input type="date" name="date" value="{{ activity.date }}" required>
+            <button type="submit">Update Activity</button>
+        </form>
+        <a href="{{ url_for('index') }}">Back to Activity Log</a>
+    </div>
+</body>
+</html>

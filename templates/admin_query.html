@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Query</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Admin Query</h1>
+        <p><a href="{{ url_for('index') }}">Back to Activity Logger</a></p>
+        <form method="POST">
+            <textarea name="query" rows="4" cols="50" placeholder="Enter your SQL query here">{{ query }}</textarea>
+            <button type="submit">Execute Query</button>
+        </form>
+        
+        {% if error %}
+        <div class="error">
+            <h2>Error:</h2>
+            <pre>{{ error }}</pre>
+        </div>
+        {% endif %}
+
+        {% if results %}
+        <h2>Query Results:</h2>
+        <table>
+            <thead>
+                <tr>
+                    {% for column in results[0].keys() %}
+                    <th>{{ column }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in results %}
+                <tr>
+                    {% for value in row %}
+                    <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+</body>
+</html>

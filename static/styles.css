@@ -1,0 +1,226 @@
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+.container {
+    width: 80%;
+    margin: auto;
+    overflow: hidden;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    border-radius: 5px;
+}
+
+h1, h2 {
+    color: #333;
+}
+
+a {
+    color: #007bff;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+form {
+    background: #f4f4f4;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+
+input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+button {
+    display: inline-block;
+    background: #333;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+button:hover {
+    background: #555;
+}
+
+.activity-grid {
+    display: grid;
+    grid-template-columns: repeat(53, 1fr);
+    gap: 2px;
+    margin-bottom: 20px;
+}
+
+.grid-cell {
+    width: 10px;
+    height: 10px;
+    background-color: #ebedf0;
+    border-radius: 2px;
+    position: relative;
+}
+
+.tooltip {
+    visibility: hidden;
+    width: 120px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -60px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.grid-cell:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+.activity-log {
+    margin-top: 20px;
+}
+
+.activity-item {
+    background: #f4f4f4;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+}
+
+.activity-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.activity-content strong {
+    flex-grow: 1;
+}
+
+.category {
+    display: inline-block;
+    padding: 2px 5px;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 0.8em;
+    margin-right: 10px;
+}
+
+.category.fitness { background-color: #28a745; }
+.category.reading { background-color: #007bff; }
+.category.housework { background-color: #6c757d; }
+.category.drive { background-color: #dc3545; }
+.category.cooking { background-color: #ffc107; color: #000; }
+.category.other { background-color: #17a2b8; }
+
+.edit-button {
+    float: right;
+    padding: 2px 5px;
+    background-color: #28a745;
+    color: #fff;
+    border-radius: 3px;
+    font-size: 0.8em;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+}
+
+.edit-button:hover {
+    background-color: #218838;
+    color: #fff;
+    text-decoration: none;
+}
+
+.hours {
+    margin-right: 10px;
+}
+
+.date-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.date-navigation button {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+#currentDate {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.alert {
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.alert-error {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 0.9em;
+}
+
+th, td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+tr:hover {
+    background-color: #f5f5f5;
+}

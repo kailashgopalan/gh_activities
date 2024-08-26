@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Logger</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Activity Logger</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% if session.email %}
+            <p>Logged in as: {{ session.email }} | <a href="{{ url_for('logout') }}">Logout</a></p>
+            {% if session.email == config['ADMIN_EMAIL'] %}
+                <p><a href="{{ url_for('admin_query') }}">Admin Query</a></p>
+            {% endif %}
+            <form method="POST">
+                <input type="text" name="activity" placeholder="Activity" required>
+                <select name="category">
+                    <option value="">Auto-classify</option>
+                    <option value="fitness">Fitness 🏋️</option>
+                    <option value="reading">Reading 📚</option>
+                    <option value="housework">House Work 🧹</option>
+                    <option value="drive">Drive 🚗</option>
+                    <option value="cooking">Cooking 👨‍🍳</option>
+                    <option value="other">Other 🔹</option>
+                </select>
+                <input type="number" name="hours" step="0.5" min="0" max="24" placeholder="Hours" required>
+                <button type="submit">Log Activity</button>
+            </form>
+            
+            <h2>Activity Grid</h2>
+            <div class="activity-grid" id="activityGrid"></div>
+            
+            <h2>Activity Log</h2>
+            <div class="date-navigation">
+                <button id="prevDay">&lt; Previous Day</button>
+                <span id="currentDate">{{ current_date }}</span>
+                <button id="nextDay">Next Day &gt;</button>
+            </div>
+            <div id="activityLog" class="activity-log">
+                {% for activity in activities %}
+                <div class="activity-item">
+                    <div class="activity-content">
+                        <strong>{{ activity.activity }}</strong>
+                        <span class="category {{ activity.category }}">
+                            {{ activity.category }}
+                            {% if activity.category == 'fitness' %}🏋️
+                            {% elif activity.category == 'reading' %}📚
+                            {% elif activity.category == 'housework' %}🧹
+                            {% elif activity.category == 'drive' %}🚗
+                            {% elif activity.category == 'cooking' %}👨‍🍳
+                            {% else %}🔹
+                            {% endif %}
+                        </span>
+                        <span class="hours">{{ activity.hours }} hours</span>
+                        <a href="{{ url_for('edit_activity', activity_id=activity.id) }}" class="edit-button">Edit</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p><a href="{{ url_for('login') }}">Login with Google</a></p>
+        {% endif %}
+    </div>
+
+    <script>
+        const gridData = JSON.parse('{{ grid_data|tojson|safe }}');
+        const grid = document.getElementById('activityGrid');
+
+        gridData.forEach(item => {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            cell.style.backgroundColor = `rgba(40, 167, 69, ${item.hours / 10 > 1 ? 1 : item.hours / 10})`;
+            
+            const tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            tooltip.innerHTML = `<strong>${item.date}</strong><br>Total: ${item.hours.toFixed(1)} hours<br>${item.summary.join('<br>')}`;
+            
+            cell.appendChild(tooltip);
+            grid.appendChild(cell);
+        });
+
+        // Date navigation
+        const prevDayBtn = document.getElementById('prevDay');
+        const nextDayBtn = document.getElementById('nextDay');
+        const currentDateSpan = document.getElementById('currentDate');
+        const activityLog = document.getElementById('activityLog');
+
+        let currentDate = new Date('{{ current_date }}');
+
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function updateActivityLog(date) {
+            fetch(`/activities/${formatDate(date)}`)
+                .then(response => response.json())
+                .then(activities => {
+                    activityLog.innerHTML = activities.map(activity => `
+                        <div class="activity-item">
+                            <div class="activity-content">
+                                <strong>${activity.activity}</strong>
+                                <span class="category ${activity.category}">
+                                    ${activity.category}
+                                    ${getCategoryEmoji(activity.category)}
+                                </span>
+                                <span class="hours">${activity.hours} hours</span>
+                                <a href="/edit/${activity.id}" class="edit-button">Edit</a>
+                            </div>
+                        </div>
+                    `).join('');
+                });
+        }
+
+        function getCategoryEmoji(category) {
+            switch (category) {
+                case 'fitness': return '🏋️';
+                case 'reading': return '📚';
+                case 'housework': return '🧹';
+                case 'drive': return '🚗';
+                case 'cooking': return '👨‍🍳';
+                default: return '🔹';
+            }
+        }
+
+        prevDayBtn.addEventListener('click', () => {
+            currentDate.setDate(currentDate.getDate() - 1);
+            currentDateSpan.textContent = formatDate(currentDate);
+            updateActivityLog(currentDate);
+        });
+
+        nextDayBtn.addEventListener('click', () => {
+            currentDate.setDate(currentDate.getDate() + 1);
+            currentDateSpan.textContent = formatDate(currentDate);
+            updateActivityLog(currentDate);
+        });
+    </script>
+</body>
+</html>
