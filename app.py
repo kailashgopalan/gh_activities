@@ -82,7 +82,7 @@ def classify_activity(activity):
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that classifies activities into categories."},
-                {"role": "user", "content": f"Classify the following activity into one of these categories: fitness, reading, housework, drive, cooking, or other. Only respond with the category name. Activity: {activity}"}
+                {"role": "user", "content": f"Classify the following activity into one of these categories: fitness, reading, housework, drive, cooking, playtime or other. Only respond with the category name. Activity: {activity}"}
             ]
         )
         return response.choices[0].message.content.strip().lower()
