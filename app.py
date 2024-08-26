@@ -36,24 +36,13 @@ google = oauth.register(
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Database setup
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sqlite_path = os.path.join(BASE_DIR, 'activities.db')
-DATABASE_URL = os.environ.get('DATABASE_URL', f'sqlite:///{sqlite_path}')
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 def get_db_connection():
-    global DATABASE_URL
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-    
-    url = urlparse(DATABASE_URL)
-    if url.scheme == 'sqlite':
-        import sqlite3
-        db_path = url.path[1:] if url.path.startswith('/') else url.path
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-    else:
-        conn = psycopg2.connect(DATABASE_URL)
-        conn.cursor_factory = psycopg2.extras.DictCursor
+    conn = psycopg2.connect(DATABASE_URL)
+    conn.cursor_factory = DictCursor
     return conn
 
 def init_db():
@@ -87,7 +76,7 @@ def classify_activity(activity):
 def get_activities(user_id, date):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM activities WHERE user_id = ? AND date = ? ORDER BY id DESC', (user_id, date))
+    cur.execute('SELECT * FROM activities WHERE user_id = %s AND date = %s ORDER BY id DESC', (user_id, date))
     activities = cur.fetchall()
     cur.close()
     conn.close()
@@ -96,7 +85,7 @@ def get_activities(user_id, date):
 def add_activity(user_id, date, activity, category, hours):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('INSERT INTO activities (user_id, date, activity, category, hours) VALUES (?, ?, ?, ?, ?)',
+    cur.execute('INSERT INTO activities (user_id, date, activity, category, hours) VALUES (%s, %s, %s, %s, %s)',
                  (user_id, date, activity, category, hours))
     conn.commit()
     cur.close()
@@ -105,7 +94,7 @@ def add_activity(user_id, date, activity, category, hours):
 def update_activity(activity_id, user_id, date, activity, category, hours):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('UPDATE activities SET date = ?, activity = ?, category = ?, hours = ? WHERE id = ? AND user_id = ?',
+    cur.execute('UPDATE activities SET date = %s, activity = %s, category = %s, hours = %s WHERE id = %s AND user_id = %s',
                  (date, activity, category, hours, activity_id, user_id))
     conn.commit()
     cur.close()
@@ -114,7 +103,7 @@ def update_activity(activity_id, user_id, date, activity, category, hours):
 def get_activity(activity_id, user_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM activities WHERE id = ? AND user_id = ?', (activity_id, user_id))
+    cur.execute('SELECT * FROM activities WHERE id = %s AND user_id = %s', (activity_id, user_id))
     activity = cur.fetchone()
     cur.close()
     conn.close()
@@ -126,7 +115,7 @@ def generate_grid_data(user_id):
     
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM activities WHERE user_id = ? AND date >= ?', 
+    cur.execute('SELECT * FROM activities WHERE user_id = %s AND date >= %s', 
                               (user_id, start_date.isoformat()))
     activities = cur.fetchall()
     cur.close()
@@ -258,7 +247,6 @@ def init_db_command():
     print("Initialized the database.")
 
 if __name__ == '__main__':
-    with app.app_context():
-        init_db()
+    init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
