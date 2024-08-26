@@ -9,6 +9,11 @@ from collections import Counter, defaultdict
 from dotenv import load_dotenv
 from openai import OpenAI
 from functools import wraps
+import importlib.metadata
+import sys
+
+# Add compatibility layer for importlib_metadata
+sys.modules['importlib_metadata'] = importlib.metadata
 
 load_dotenv()
 
