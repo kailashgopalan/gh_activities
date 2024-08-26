@@ -52,21 +52,15 @@ def get_db_connection():
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
     else:
-        conn = psycopg2.connect(
-            dbname=url.path[1:],
-            user=url.username,
-            password=url.password,
-            host=url.hostname,
-            port=url.port
-        )
-        conn.cursor_factory = DictCursor
+        conn = psycopg2.connect(DATABASE_URL)
+        conn.cursor_factory = psycopg2.extras.DictCursor
     return conn
 
 def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('''CREATE TABLE IF NOT EXISTS activities
-                   (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   (id SERIAL PRIMARY KEY,
                     user_id TEXT NOT NULL,
                     date TEXT NOT NULL,
                     activity TEXT NOT NULL,
@@ -264,5 +258,7 @@ def init_db_command():
     print("Initialized the database.")
 
 if __name__ == '__main__':
-    init_db()
-    app.run(debug=True)
+    with app.app_context():
+        init_db()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
