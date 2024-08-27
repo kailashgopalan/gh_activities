@@ -48,24 +48,34 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('''CREATE TABLE IF NOT EXISTS classifications
+    
+    # Drop existing tables
+    cur.execute("DROP TABLE IF EXISTS activities")
+    cur.execute("DROP TABLE IF EXISTS habits")
+    cur.execute("DROP TABLE IF EXISTS classifications")
+    
+    # Create tables with new schema
+    cur.execute('''CREATE TABLE classifications
                    (id SERIAL PRIMARY KEY,
                     user_id TEXT NOT NULL,
                     name TEXT NOT NULL)''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS habits
+    cur.execute('''CREATE TABLE habits
                    (id SERIAL PRIMARY KEY,
                     user_id TEXT NOT NULL,
                     name TEXT NOT NULL,
                     classification_id INTEGER REFERENCES classifications(id))''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS activities
+    cur.execute('''CREATE TABLE activities
                    (id SERIAL PRIMARY KEY,
                     user_id TEXT NOT NULL,
                     date DATE NOT NULL,
                     habit_id INTEGER REFERENCES habits(id),
                     hours REAL NOT NULL)''')
+    
     conn.commit()
     cur.close()
     conn.close()
+    print("Database initialized with new schema.")
+
 
 def classify_activity(activity, user_id):
     conn = get_db_connection()
