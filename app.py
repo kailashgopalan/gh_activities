@@ -58,7 +58,7 @@ class User(db.Model):
 
 class Habit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.String(128), db.ForeignKey('user.id'), nullable=False)  # Change this to String
     name = db.Column(db.String(120), nullable=False)
     emoji = db.Column(db.String(10))  # Add this line
 
