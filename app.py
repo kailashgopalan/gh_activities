@@ -236,8 +236,10 @@ def index():
             description = request.form.get('description')
             hours = float(request.form.get('hours'))
             date = datetime.now().strftime("%Y-%m-%d")
-            habits = get_habits(session['user_id'])
-            habit_id = classify_activity(description, habits)
+            habit_id = request.form.get('habit_id')
+            if not habit_id:
+                habits = get_habits(session['user_id'])
+                habit_id = classify_activity(description, habits)
             if habit_id:
                 add_activity(session['user_id'], date, habit_id, description, hours)
                 flash('Activity added and classified successfully!', 'success')
@@ -263,20 +265,36 @@ def index():
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('''
-        SELECT date, SUM(hours) as total_hours
+        SELECT date, SUM(hours) as total_hours, 
+               STRING_AGG(description || ' (' || hours || ' hours)', ', ') as summary
         FROM activities
         WHERE user_id = %s AND date BETWEEN %s AND %s
         GROUP BY date
+        ORDER BY date DESC
     ''', (session['user_id'], start_date, end_date))
     
+    grid_data = []
     for row in cur.fetchall():
         daily_hours[row['date'].isoformat()] = float(row['total_hours'])
+        grid_data.append({
+            'date': row['date'].isoformat(),
+            'hours': float(row['total_hours']),
+            'summary': row['summary'].split(', ')
+        })
     
     # Fill in missing dates with 0 hours
     for i in range(365):
         date = (end_date - timedelta(days=i)).isoformat()
         if date not in daily_hours:
             daily_hours[date] = 0.0
+            grid_data.append({
+                'date': date,
+                'hours': 0.0,
+                'summary': []
+            })
+    
+    # Sort grid_data by date
+    grid_data.sort(key=lambda x: x['date'], reverse=True)
     
     # Prepare data for charts
     habit_data = defaultdict(lambda: {'dates': [], 'hours': []})
@@ -306,7 +324,20 @@ def index():
                            is_admin=(session.get('email') == app.config['ADMIN_EMAIL']),
                            daily_hours=daily_hours, 
                            habit_data=dict(habit_data),
+                           grid_data=grid_data,
                            timedelta=timedelta)
+
+@app.route('/activities/<date>')
+@login_required
+def get_activities_for_date(date):
+    activities = get_activities(session['user_id'], date)
+    return jsonify([{
+        'id': activity['id'],
+        'description': activity['description'],
+        'habit_name': activity['habit_name'],
+        'emoji': activity['emoji'],
+        'hours': activity['hours']
+    } for activity in activities])
 
 @app.route('/edit/<int:activity_id>', methods=['GET', 'POST'])
 @login_required
