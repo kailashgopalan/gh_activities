@@ -270,7 +270,7 @@ def index():
     ''', (session['user_id'], start_date, end_date))
     
     for row in cur.fetchall():
-        daily_hours[row['date'].isoformat()] = row['total_hours']
+        daily_hours[row['date'].isoformat()] = float(row['total_hours'])
     
     # Prepare data for charts
     habit_data = defaultdict(lambda: {'dates': [], 'hours': []})
