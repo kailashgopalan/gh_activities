@@ -322,12 +322,15 @@ def update_activity(activity_id):
 @login_required
 def activity_grid_data():
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=364)  # 365 days including today
+    start_date = end_date - timedelta(days=364)
     
     activities = db.session.query(
         Activity.date,
-        db.func.sum(Activity.hours).label('total_hours'),
-        db.func.group_concat(Habit.name + ': ' + db.cast(Activity.hours, db.String) + ' hours').label('summary')
+        func.sum(Activity.hours).label('total_hours'),
+        func.string_agg(
+            Habit.name + ': ' + cast(Activity.hours, String) + ' hours',
+            ', '
+        ).label('summary')
     ).join(Habit).filter(
         Activity.user_id == session['user_id'],
         Activity.date >= start_date,
@@ -351,7 +354,6 @@ def activity_grid_data():
                 'summary': []
             })
     
-    print(f"Returning {len(grid_data)} days of data")  # Debug print
     return jsonify(grid_data)
 
 @app.route('/habit_data')
