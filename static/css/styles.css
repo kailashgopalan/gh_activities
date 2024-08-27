@@ -1,139 +1,155 @@
-/* General Styles */
 body {
-    font-family: 'Arial', sans-serif;
-    background-color: #f4f4f4;
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
     color: #333;
+    background-color: #f4f4f4;
 }
 
 .container {
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    padding: 30px;
-    margin-top: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 5px;
 }
 
-h1, h2, h3 {
+h1, h2 {
     color: #2c3e50;
-    margin-bottom: 20px;
 }
 
-/* Navigation Styles */
-.navbar {
-    background-color: #3498db;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.navbar-brand, .navbar-nav .nav-link {
-    color: #ffffff !important;
-}
-
-.navbar-brand:hover, .navbar-nav .nav-link:hover {
-    color: #ecf0f1 !important;
-}
-
-/* Form Styles */
-.form-control {
-    border-radius: 4px;
-    border: 1px solid #bdc3c7;
-}
-
-.form-control:focus {
-    border-color: #3498db;
-    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
-}
-
-.btn-primary {
-    background-color: #3498db;
-    border-color: #3498db;
-}
-
-.btn-primary:hover {
-    background-color: #2980b9;
-    border-color: #2980b9;
-}
-
-.btn-secondary {
-    background-color: #95a5a6;
-    border-color: #95a5a6;
-}
-
-.btn-secondary:hover {
-    background-color: #7f8c8d;
-    border-color: #7f8c8d;
-}
-
-/* Table Styles */
-.table {
-    background-color: #ffffff;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.table th {
-    background-color: #34495e;
-    color: #ffffff;
-}
-
-.table-striped tbody tr:nth-of-type(odd) {
-    background-color: rgba(52, 152, 219, 0.05);
-}
-
-.table-hover tbody tr:hover {
-    background-color: rgba(52, 152, 219, 0.1);
-}
-
-/* Alert Styles */
-.alert {
-    border-radius: 4px;
-}
-
-.alert-success {
-    background-color: #2ecc71;
-    border-color: #27ae60;
-    color: #ffffff;
-}
-
-.alert-danger {
-    background-color: #e74c3c;
-    border-color: #c0392b;
-    color: #ffffff;
-}
-
-/* Custom Styles for Habit Tracker */
-.emoji {
-    font-size: 1.2em;
+.btn {
     margin-right: 5px;
 }
 
-.summary-card {
-    background-color: #ecf0f1;
-    border-radius: 4px;
-    padding: 15px;
+/* GitHub-style grid */
+.github-grid {
+    display: grid;
+    grid-template-columns: repeat(52, 1fr);
+    gap: 2px;
+    margin-bottom: 30px;
+}
+
+.grid-cell {
+    width: 12px;
+    height: 12px;
+    background-color: #ebedf0;
+    border-radius: 2px;
+    position: relative;
+}
+
+.tooltip {
+    display: none;
+    position: absolute;
+    background-color: #333;
+    color: #fff;
+    padding: 5px;
+    border-radius: 3px;
+    z-index: 1;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.grid-cell:hover .tooltip {
+    display: block;
+}
+
+/* Date navigation */
+.date-navigation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     margin-bottom: 20px;
 }
 
-.habit-name {
+.date-navigation span {
     font-weight: bold;
-    color: #2c3e50;
+    margin: 0 10px;
 }
 
-.habit-hours {
-    font-size: 1.2em;
+/* Tables */
+.table {
+    background-color: #fff;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.table thead {
+    background-color: #3498db;
+    color: #fff;
+}
+
+.table th, .table td {
+    padding: 12px 15px;
+}
+
+/* Forms */
+form {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 5px;
+    margin-bottom: 30px;
+}
+
+.form-control {
+    margin-bottom: 15px;
+}
+
+/* Summary tabs */
+.summary-tabs {
+    margin-top: 30px;
+}
+
+.nav-tabs {
+    border-bottom: 2px solid #3498db;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: #333;
+    font-weight: bold;
+}
+
+.nav-tabs .nav-link.active {
     color: #3498db;
+    background-color: transparent;
+    border-bottom: 2px solid #3498db;
 }
 
-/* Responsive Adjustments */
+.tab-content {
+    padding: 20px;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+}
+
+/* Charts */
+canvas {
+    max-width: 100%;
+    height: auto !important;
+}
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
-    .container {
-        padding: 15px;
+    .github-grid {
+        grid-template-columns: repeat(26, 1fr);
     }
-    
-    h1 {
-        font-size: 1.8em;
+
+    .grid-cell {
+        width: 10px;
+        height: 10px;
     }
-    
-    h2 {
-        font-size: 1.5em;
+
+    .date-navigation {
+        flex-direction: column;
+    }
+
+    .date-navigation span {
+        margin: 10px 0;
     }
 }

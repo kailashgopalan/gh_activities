@@ -245,13 +245,56 @@ def index():
                 flash('Could not classify activity. Please try again.', 'error')
         return redirect(url_for('index'))
     
-    today = datetime.now().date()
+    date_param = request.args.get('date')
+    if date_param:
+        current_date = datetime.strptime(date_param, '%Y-%m-%d').date()
+    else:
+        current_date = datetime.now().date()
+
     habits = get_habits(session['user_id'])
-    activities = get_activities(session['user_id'], today.isoformat())
+    activities = get_activities(session['user_id'], current_date.isoformat())
     summary = get_summary(session['user_id'])
+
+    # Calculate daily hours for the past year
+    daily_hours = {}
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=365)
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT date, SUM(hours) as total_hours
+        FROM activities
+        WHERE user_id = %s AND date BETWEEN %s AND %s
+        GROUP BY date
+    ''', (session['user_id'], start_date, end_date))
+    
+    for row in cur.fetchall():
+        daily_hours[row['date'].isoformat()] = row['total_hours']
+    
+    # Prepare data for charts
+    habit_data = defaultdict(lambda: {'dates': [], 'hours': []})
+    
+    cur.execute('''
+        SELECT h.name as habit, a.date, SUM(a.hours) as total_hours
+        FROM activities a
+        JOIN habits h ON a.habit_id = h.id
+        WHERE a.user_id = %s
+        GROUP BY h.name, a.date
+        ORDER BY h.name, a.date
+    ''', (session['user_id'],))
+    
+    for row in cur.fetchall():
+        habit_data[row['habit']]['dates'].append(row['date'].strftime('%Y-%m-%d'))
+        habit_data[row['habit']]['hours'].append(float(row['total_hours']))
+    
+    cur.close()
+    conn.close()
+
     return render_template('index.html', habits=habits, activities=activities, summary=summary, 
-                           current_date=today.isoformat(), user_name=session.get('name'),
-                           is_admin=(session.get('email') == app.config['ADMIN_EMAIL']))
+                           current_date=current_date, user_name=session.get('name'),
+                           is_admin=(session.get('email') == app.config['ADMIN_EMAIL']),
+                           daily_hours=daily_hours, habit_data=dict(habit_data))
 
 @app.route('/edit/<int:activity_id>', methods=['GET', 'POST'])
 @login_required
