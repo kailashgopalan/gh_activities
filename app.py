@@ -272,6 +272,12 @@ def index():
     for row in cur.fetchall():
         daily_hours[row['date'].isoformat()] = float(row['total_hours'])
     
+    # Fill in missing dates with 0 hours
+    for i in range(365):
+        date = (end_date - timedelta(days=i)).isoformat()
+        if date not in daily_hours:
+            daily_hours[date] = 0.0
+    
     # Prepare data for charts
     habit_data = defaultdict(lambda: {'dates': [], 'hours': []})
     
