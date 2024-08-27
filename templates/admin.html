@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Query - Activity Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .admin-query {
+            margin-top: 20px;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #queryResult {
+            margin-top: 20px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Admin Query</h1>
+    <a href="{{ url_for('index') }}">Back to Dashboard</a>
+    <div class="admin-query">
+        <form id="adminQueryForm">
+            <textarea name="query" rows="4" cols="50" placeholder="Enter your SQL query here"></textarea>
+            <button type="submit">Run Query</button>
+        </form>
+        <div id="queryResult"></div>
+    </div>
+
+    <script>
+        document.getElementById('adminQueryForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const query = this.elements['query'].value;
+            fetch('/admin/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: query }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('queryResult');
+                if (data.error) {
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                } else {
+                    let resultHtml = '<table><tr>';
+                    // Add table headers
+                    for (let key in data.results[0]) {
+                        resultHtml += `<th>${key}</th>`;
+                    }
+                    resultHtml += '</tr>';
+                    // Add table rows
+                    data.results.forEach(row => {
+                        resultHtml += '<tr>';
+                        for (let key in row) {
+                            resultHtml += `<td>${row[key]}</td>`;
+                        }
+                        resultHtml += '</tr>';
+                    });
+                    resultHtml += '</table>';
+                    resultDiv.innerHTML = resultHtml;
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                document.getElementById('queryResult').innerHTML = `<p style="color: red;">An error occurred while running the query</p>`;
+            });
+        });
+    </script>
+</body>
+</html>

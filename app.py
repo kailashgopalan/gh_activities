@@ -2,17 +2,16 @@ import importlib.metadata
 import sys
 sys.modules['importlib_metadata'] = importlib.metadata
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort
 from authlib.integrations.flask_client import OAuth
+from collections import defaultdict
 from datetime import datetime, timedelta
-import os
-import psycopg2
-from psycopg2.extras import DictCursor
-from urllib.parse import urlparse
-from collections import Counter, defaultdict
 from dotenv import load_dotenv
-from openai import OpenAI
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort, json
+from flask_sqlalchemy import SQLAlchemy
 from functools import wraps
+import os
+from openai import OpenAI
+from sqlalchemy import func, cast, String, text
 
 load_dotenv()
 
@@ -34,63 +33,60 @@ google = oauth.register(
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-# Database setup
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# Determine the environment
+ENVIRONMENT = os.getenv("FLASK_ENV", "development")
 
-def get_db_connection():
-    conn = psycopg2.connect(DATABASE_URL)
-    conn.cursor_factory = DictCursor
-    return conn
+if ENVIRONMENT == "production":
+    # Use the DATABASE_URL for Heroku deployment
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+else:
+    # Use a local SQLite database for development
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///local_database.db'
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# Define your models
+class User(db.Model):
+    id = db.Column(db.String(120), primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+
+class Habit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(120), nullable=False)
+    emoji = db.Column(db.String(10))  # Add this line
+
+
+class Activity(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(120), db.ForeignKey('user.id'), nullable=False)
+    habit_id = db.Column(db.Integer, db.ForeignKey('habit.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    hours = db.Column(db.Float, nullable=False)
+    description = db.Column(db.String(255))  # Add this line
+    date = db.Column(db.Date, nullable=False)
+
+    habit = db.relationship('Habit', backref='activities')
 
 def init_db():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    # Drop existing tables
-    cur.execute("DROP TABLE IF EXISTS activities")
-    cur.execute("DROP TABLE IF EXISTS habits")
-    
-    # Create tables with new schema
-    cur.execute('''CREATE TABLE habits
-                   (id SERIAL PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    emoji TEXT NOT NULL)''')
-    cur.execute('''CREATE TABLE activities
-                   (id SERIAL PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    date DATE NOT NULL,
-                    habit_id INTEGER REFERENCES habits(id),
-                    description TEXT NOT NULL,
-                    hours REAL NOT NULL)''')
-    
-    conn.commit()
-    cur.close()
-    conn.close()
-    print("Database initialized with new schema.")
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
 
 def get_habits(user_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM habits WHERE user_id = %s', (user_id,))
-    habits = cur.fetchall()
-    cur.close()
-    conn.close()
-    return [dict(habit) for habit in habits]
+    return Habit.query.filter_by(user_id=user_id).all()
 
 def add_habit(user_id, habit_name):
     emoji = generate_emoji(habit_name)
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('INSERT INTO habits (user_id, name, emoji) VALUES (%s, %s, %s) RETURNING id',
-                (user_id, habit_name, emoji))
-    habit_id = cur.fetchone()[0]
-    conn.commit()
-    cur.close()
-    conn.close()
-    return habit_id
+    new_habit = Habit(user_id=user_id, name=habit_name, emoji=emoji)
+    db.session.add(new_habit)
+    db.session.commit()
 
 def generate_emoji(habit_name):
     try:
@@ -107,7 +103,7 @@ def generate_emoji(habit_name):
         return "😊"  # Default emoji if generation fails
 
 def classify_activity(activity_description, user_habits):
-    habit_names = [habit['name'] for habit in user_habits]
+    habit_names = [habit.name for habit in user_habits]
     habits_str = ", ".join(habit_names)
     try:
         response = client.chat.completions.create(
@@ -119,77 +115,65 @@ def classify_activity(activity_description, user_habits):
         )
         classified_habit = response.choices[0].message.content.strip()
         for habit in user_habits:
-            if habit['name'].lower() == classified_habit.lower():
-                return habit['id']
+            if habit.name.lower() == classified_habit.lower():
+                return habit.id
         return None  # If no match found
     except Exception as e:
         print(f"Error in classification: {e}")
         return None
 
-def add_activity(user_id, date, habit_id, description, hours):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('INSERT INTO activities (user_id, date, habit_id, description, hours) VALUES (%s, %s, %s, %s, %s)',
-                 (user_id, date, habit_id, description, hours))
-    conn.commit()
-    cur.close()
-    conn.close()
+def add_activity(user_id, habit_id, date, description, hours):
+    new_activity = Activity(user_id=user_id, habit_id=habit_id, date=date, description=description, hours=hours)
+    db.session.add(new_activity)
+    db.session.commit()
 
 def get_activities(user_id, date):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT a.*, h.name as habit_name, h.emoji
-        FROM activities a
-        JOIN habits h ON a.habit_id = h.id
-        WHERE a.user_id = %s AND a.date = %s
-        ORDER BY a.id DESC
-    ''', (user_id, date))
-    activities = cur.fetchall()
-    cur.close()
-    conn.close()
-    return [dict(activity) for activity in activities]
+    return Activity.query.filter_by(user_id=user_id, date=date).all()
 
 def get_summary(user_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT h.name as habit, h.emoji, SUM(a.hours) as total_hours
-        FROM activities a
-        JOIN habits h ON a.habit_id = h.id
-        WHERE a.user_id = %s
-        GROUP BY h.id, h.name, h.emoji
-    ''', (user_id,))
-    summary = cur.fetchall()
-    cur.close()
-    conn.close()
-    return [dict(item) for item in summary]
+    activities = db.session.query(
+        Habit.name, 
+        func.sum(Activity.hours).label('total_hours')
+    ).join(Activity).filter(
+        Activity.user_id == user_id
+    ).group_by(Habit.name).all()
+    return {activity.name: float(activity.total_hours) for activity in activities}
 
 def get_activity(activity_id, user_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT a.*, h.name as habit_name, h.emoji
-        FROM activities a
-        JOIN habits h ON a.habit_id = h.id
-        WHERE a.id = %s AND a.user_id = %s
-    ''', (activity_id, user_id))
-    activity = cur.fetchone()
-    cur.close()
-    conn.close()
-    return dict(activity) if activity else None
+    return Activity.query.filter_by(id=activity_id, user_id=user_id).first()
 
 def update_activity(activity_id, user_id, date, habit_id, description, hours):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        UPDATE activities 
-        SET date = %s, habit_id = %s, description = %s, hours = %s 
-        WHERE id = %s AND user_id = %s
-    ''', (date, habit_id, description, hours, activity_id, user_id))
-    conn.commit()
-    cur.close()
-    conn.close()
+    activity = Activity.query.filter_by(id=activity_id, user_id=user_id).first()
+    if activity:
+        activity.date = date
+        activity.habit_id = habit_id
+        activity.description = description
+        activity.hours = hours
+        db.session.commit()
+
+def get_habit_data(user_id):
+    habit_data = {}
+    habits = get_habits(user_id)
+    
+    for habit in habits:
+        activities = db.session.query(Activity.date, func.sum(Activity.hours).label('total_hours'))\
+            .filter(Activity.user_id == user_id, Activity.habit_id == habit.id)\
+            .group_by(Activity.date)\
+            .order_by(Activity.date)\
+            .all()
+        
+        dates = []
+        hours = []
+        for activity in activities:
+            dates.append(activity.date.strftime('%Y-%m-%d'))
+            hours.append(float(activity.total_hours))
+        
+        habit_data[habit.name] = {
+            'dates': dates,
+            'hours': hours
+        }
+    
+    return habit_data
 
 @app.route('/login')
 def login():
@@ -198,10 +182,7 @@ def login():
 
 @app.route('/logout')
 def logout():
-    session.pop('google_token', None)
-    session.pop('user_id', None)
-    session.pop('email', None)
-    session.pop('name', None)
+    session.clear()
     return redirect(url_for('index'))
 
 @app.route('/callback')
@@ -209,9 +190,13 @@ def authorized():
     token = google.authorize_access_token()
     resp = google.get('https://www.googleapis.com/oauth2/v2/userinfo')
     user_info = resp.json()
-    session['google_token'] = token
-    session['user_id'] = user_info['id']
-    session['email'] = user_info['email']
+    user = User.query.get(user_info['id'])
+    if not user:
+        user = User(id=user_info['id'], username=user_info['email'], email=user_info['email'])
+        db.session.add(user)
+        db.session.commit()
+    session['user_id'] = user.id
+    session['email'] = user.email
     session['name'] = user_info.get('name', 'User')
     return redirect(url_for('index'))
 
@@ -235,151 +220,189 @@ def index():
         elif action == 'add_activity':
             description = request.form.get('description')
             hours = float(request.form.get('hours'))
-            date = datetime.now().strftime("%Y-%m-%d")
-            habit_id = request.form.get('habit_id')
-            if not habit_id:
-                habits = get_habits(session['user_id'])
-                habit_id = classify_activity(description, habits)
+            date = datetime.now().date()
+            habits = get_habits(session['user_id'])
+            habit_id = classify_activity(description, habits)
             if habit_id:
-                add_activity(session['user_id'], date, habit_id, description, hours)
-                flash('Activity added and classified successfully!', 'success')
+                add_activity(session['user_id'], habit_id, date, description, hours)
+                flash('Activity logged and classified successfully!', 'success')
             else:
-                flash('Could not classify activity. Please try again.', 'error')
+                flash('Could not classify activity. Please try again or select a habit manually.', 'error')
         return redirect(url_for('index'))
-    
-    date_param = request.args.get('date')
-    if date_param:
-        current_date = datetime.strptime(date_param, '%Y-%m-%d').date()
-    else:
-        current_date = datetime.now().date()
 
     habits = get_habits(session['user_id'])
-    activities = get_activities(session['user_id'], current_date.isoformat())
-    summary = get_summary(session['user_id'])
-
-    # Calculate daily hours for the past year
-    daily_hours = {}
-    end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=365)
-    
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT date, SUM(hours) as total_hours, 
-               STRING_AGG(description || ' (' || hours || ' hours)', ', ') as summary
-        FROM activities
-        WHERE user_id = %s AND date BETWEEN %s AND %s
-        GROUP BY date
-        ORDER BY date DESC
-    ''', (session['user_id'], start_date, end_date))
-    
-    grid_data = []
-    for row in cur.fetchall():
-        daily_hours[row['date'].isoformat()] = float(row['total_hours'])
-        grid_data.append({
-            'date': row['date'].isoformat(),
-            'hours': float(row['total_hours']),
-            'summary': row['summary'].split(', ')
-        })
-    
-    # Fill in missing dates with 0 hours
-    for i in range(365):
-        date = (end_date - timedelta(days=i)).isoformat()
-        if date not in daily_hours:
-            daily_hours[date] = 0.0
-            grid_data.append({
-                'date': date,
-                'hours': 0.0,
-                'summary': []
-            })
-    
-    # Sort grid_data by date
-    grid_data.sort(key=lambda x: x['date'], reverse=True)
-    
-    # Prepare data for charts
-    habit_data = defaultdict(lambda: {'dates': [], 'hours': []})
-    
-    cur.execute('''
-        SELECT h.name as habit, a.date, SUM(a.hours) as total_hours
-        FROM activities a
-        JOIN habits h ON a.habit_id = h.id
-        WHERE a.user_id = %s
-        GROUP BY h.name, a.date
-        ORDER BY h.name, a.date
-    ''', (session['user_id'],))
-    
-    for row in cur.fetchall():
-        habit_data[row['habit']]['dates'].append(row['date'].strftime('%Y-%m-%d'))
-        habit_data[row['habit']]['hours'].append(float(row['total_hours']))
-    
-    cur.close()
-    conn.close()
+    habits_json = json.dumps([{'id': h.id, 'name': h.name, 'emoji': h.emoji} for h in habits])
+    current_date = datetime.now().date()
+    habit_data = get_habit_data(session['user_id'])
 
     return render_template('index.html', 
-                           habits=habits, 
-                           activities=activities, 
-                           summary=summary, 
-                           current_date=current_date, 
-                           user_name=session.get('name'),
-                           is_admin=(session.get('email') == app.config['ADMIN_EMAIL']),
-                           daily_hours=daily_hours, 
-                           habit_data=dict(habit_data),
-                           grid_data=grid_data,
-                           timedelta=timedelta)
+                           habits=habits,
+                           habits_json=habits_json,
+                           current_date=current_date,
+                           habit_data=habit_data,
+                           is_admin=(session.get('email') == app.config['ADMIN_EMAIL'])
+                           )
 
 @app.route('/activities/<date>')
 @login_required
 def get_activities_for_date(date):
-    activities = get_activities(session['user_id'], date)
+    activities = get_activities(session['user_id'], datetime.strptime(date, '%Y-%m-%d').date())
     return jsonify([{
-        'id': activity['id'],
-        'description': activity['description'],
-        'habit_name': activity['habit_name'],
-        'emoji': activity['emoji'],
-        'hours': activity['hours']
+        'id': activity.id,
+        'description': activity.description,
+        'habit_name': activity.habit.name,
+        'emoji': activity.habit.emoji or "😊",
+        'hours': activity.hours
     } for activity in activities])
 
-@app.route('/edit/<int:activity_id>', methods=['GET', 'POST'])
+from flask import request, jsonify
+from datetime import datetime
+
+@app.route('/add_activity', methods=['POST'])
 @login_required
-def edit_activity(activity_id):
-    activity = get_activity(activity_id, session['user_id'])
+def add_activity():
+    data = request.json
+    habit_id = data.get('habit_id')
+    description = data.get('description')
+    hours = float(data.get('hours'))
+    date_str = data.get('date')
+
+    if not date_str:
+        date = datetime.now().date()
+    else:
+        try:
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Invalid date format'}), 400
+
+    try:
+        if not habit_id:
+            # Auto-classify the activity
+            habits = get_habits(session['user_id'])
+            habit_id = classify_activity(description, habits)
+            if not habit_id:
+                return jsonify({'success': False, 'message': 'Could not classify activity'}), 400
+
+        new_activity = Activity(
+            user_id=session['user_id'],
+            habit_id=habit_id,
+            description=description,
+            hours=hours,
+            date=date
+        )
+        db.session.add(new_activity)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Activity added successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    
+
+@app.route('/update_activity/<int:activity_id>', methods=['POST'])
+@login_required
+def update_activity(activity_id):
+    data = request.json
+    activity = Activity.query.filter_by(id=activity_id, user_id=session['user_id']).first()
+    
     if not activity:
-        flash('Activity not found or you do not have permission to edit it.', 'error')
-        return redirect(url_for('index'))
+        return jsonify({'success': False, 'message': 'Activity not found'}), 404
 
+    activity.habit_id = data['habit_id']
+    activity.description = data['description']
+    activity.hours = float(data['hours'])
+    
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Activity updated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/activity_grid_data')
+@login_required
+def activity_grid_data():
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=364)  # 365 days including today
+    
+    activities = db.session.query(
+        Activity.date,
+        db.func.sum(Activity.hours).label('total_hours'),
+        db.func.group_concat(Habit.name + ': ' + db.cast(Activity.hours, db.String) + ' hours').label('summary')
+    ).join(Habit).filter(
+        Activity.user_id == session['user_id'],
+        Activity.date >= start_date,
+        Activity.date <= end_date
+    ).group_by(Activity.date).all()
+    
+    activity_dict = {a.date: {'hours': float(a.total_hours), 'summary': a.summary.split(',')} for a in activities}
+    
+    grid_data = []
+    for day in (start_date + timedelta(n) for n in range(365)):
+        if day in activity_dict:
+            grid_data.append({
+                'date': day.isoformat(),
+                'hours': activity_dict[day]['hours'],
+                'summary': activity_dict[day]['summary']
+            })
+        else:
+            grid_data.append({
+                'date': day.isoformat(),
+                'hours': 0,
+                'summary': []
+            })
+    
+    print(f"Returning {len(grid_data)} days of data")  # Debug print
+    return jsonify(grid_data)
+
+@app.route('/habit_data')
+@login_required
+def habit_data():
     habits = get_habits(session['user_id'])
+    habit_data = get_habit_data(session['user_id'])
+    return jsonify({habit.name: {**habit_data[habit.name], 'id': habit.id} for habit in habits})
 
-    if request.method == 'POST':
-        habit_id = request.form.get('habit_id')
-        description = request.form.get('description')
-        hours = float(request.form.get('hours'))
-        date = request.form.get('date')
-        
-        update_activity(activity_id, session['user_id'], date, habit_id, description, hours)
-        flash('Activity updated successfully!', 'success')
+@app.route('/delete_activity/<int:activity_id>', methods=['DELETE'])
+@login_required
+def delete_activity(activity_id):
+    activity = Activity.query.filter_by(id=activity_id, user_id=session['user_id']).first()
+    
+    if not activity:
+        return jsonify({'success': False, 'message': 'Activity not found'}), 404
+
+    try:
+        db.session.delete(activity)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Activity deleted successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    
+@app.route('/admin')
+@login_required
+def admin():
+    if session.get('email') != app.config['ADMIN_EMAIL']:
+        flash('You do not have permission to access this page.', 'error')
         return redirect(url_for('index'))
+    return render_template('admin.html')
 
-    return render_template('edit_activity.html', activity=activity, habits=habits)
-
-@app.route('/admin/query', methods=['GET', 'POST'])
+@app.route('/admin/query', methods=['POST'])
 @login_required
 def admin_query():
-    if session['email'] != app.config['ADMIN_EMAIL']:
-        abort(403)
-    if request.method == 'POST':
-        query = request.form.get('query')
-        conn = get_db_connection()
-        cur = conn.cursor()
-        try:
-            cur.execute(query)
-            results = cur.fetchall()
-            return render_template('admin_query.html', results=results, query=query)
-        except Exception as e:
-            return render_template('admin_query.html', error=str(e), query=query)
-        finally:
-            cur.close()
-            conn.close()
-    return render_template('admin_query.html')
+    if session.get('email') != app.config['ADMIN_EMAIL']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    query = request.json.get('query')
+    if not query:
+        return jsonify({'error': 'No query provided'}), 400
+    
+    try:
+        result = db.session.execute(text(query))
+        columns = result.keys()
+        results = [dict(zip(columns, row)) for row in result.fetchall()]
+        return jsonify({'results': results})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.errorhandler(403)
 def forbidden(e):
@@ -390,6 +413,10 @@ def init_db_command():
     init_db()
     print("Initialized the database.")
 
+
+#if __name__ == '__main__':
+#    port = int(os.environ.get("PORT", 5000))
+#    app.run(host='0.0.0.0', port=port)
+# At the end of your app.py file
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True)

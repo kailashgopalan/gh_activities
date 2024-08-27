@@ -153,3 +153,51 @@ canvas {
         margin: 10px 0;
     }
 }
+/* Existing styles */
+
+.activity-grid-container {
+    border: 1px solid #ccc;
+    padding: 5px;
+    margin: 10px 0;
+    overflow-x: auto;
+    width: 100%;
+    max-width: 800px; /* Adjust this value as needed */
+}
+
+.activity-grid {
+    display: grid;
+    grid-template-columns: repeat(53, 1fr);
+    gap: 1px;
+    background-color: #161414;
+}
+
+.activity-cell {
+    width: 9px; /* Reduced from 10px to account for borders */
+    height: 9px; /* Reduced from 10px to account for borders */
+    background-color: #ebedf0;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    border:1px solid #100f0f; /* Thinner border to maintain overall size */
+}
+
+.activity-cell:hover {
+    outline: 1px solid #000;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+}
+
+.tooltip {
+    position: absolute;
+    background-color: #f9f9f9;
+    border: 2px solid #333;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 6px;
+    display: none;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    color: #333;
+}
