@@ -23,12 +23,12 @@
         <h2 class="mt-4">Activity Grid</h2>
         <div class="github-grid">
             {% for day in range(365) %}
-                {% set date = (current_date - timedelta(days=365-day)).isoformat() %}
-                {% set hours = daily_hours.get(date, 0) %}
+                {% set date = (current_date - timedelta(days=365-day)).date() %}
+                {% set hours = daily_hours.get(date.isoformat(), 0) %}
                 {% set opacity = (hours / 8)|float %}
                 <div class="grid-cell" style="background-color: rgba(0, 255, 0, {{ opacity }});">
                     <div class="tooltip">
-                        <span>{{ date }}: {{ hours }} hours</span>
+                        <span>{{ date.isoformat() }}: {{ hours }} hours</span>
                     </div>
                 </div>
             {% endfor %}

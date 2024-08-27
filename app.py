@@ -291,10 +291,16 @@ def index():
     cur.close()
     conn.close()
 
-    return render_template('index.html', habits=habits, activities=activities, summary=summary, 
-                           current_date=current_date, user_name=session.get('name'),
+    return render_template('index.html', 
+                           habits=habits, 
+                           activities=activities, 
+                           summary=summary, 
+                           current_date=current_date, 
+                           user_name=session.get('name'),
                            is_admin=(session.get('email') == app.config['ADMIN_EMAIL']),
-                           daily_hours=daily_hours, habit_data=dict(habit_data))
+                           daily_hours=daily_hours, 
+                           habit_data=dict(habit_data),
+                           timedelta=timedelta)
 
 @app.route('/edit/<int:activity_id>', methods=['GET', 'POST'])
 @login_required
