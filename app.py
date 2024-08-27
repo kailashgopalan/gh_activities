@@ -52,20 +52,37 @@ def init_db():
                    (id SERIAL PRIMARY KEY,
                     user_id TEXT NOT NULL,
                     date TEXT NOT NULL,
-                    activity TEXT NOT NULL,
-                    category TEXT NOT NULL,
+                    habit_id INTEGER NOT NULL,
                     hours REAL NOT NULL)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS habits
+                   (id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    classification_id INTEGER NOT NULL)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS classifications
+                   (id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    name TEXT NOT NULL)''')
     conn.commit()
     cur.close()
     conn.close()
 
-def classify_activity(activity):
+def classify_activity(activity, user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT name FROM classifications WHERE user_id = %s', (user_id,))
+    user_classifications = [row['name'] for row in cur.fetchall()]
+    cur.close()
+    conn.close()
+
+    classifications = "fitness, reading, housework, drive, cooking, playtime, " + ", ".join(user_classifications)
+
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that classifies activities into categories."},
-                {"role": "user", "content": f"Classify the following activity into one of these categories: fitness, reading, housework, drive, cooking, playtime or other. Only respond with the category name. Activity: {activity}"}
+                {"role": "user", "content": f"Classify the following activity into one of these categories: {classifications}. Only respond with the category name. Activity: {activity}"}
             ]
         )
         return response.choices[0].message.content.strip().lower()
@@ -73,29 +90,75 @@ def classify_activity(activity):
         print(f"Error in classification: {e}")
         return 'other'
 
-def get_activities(user_id, date):
+def get_activities_grouped(user_id, date):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM activities WHERE user_id = %s AND date = %s ORDER BY id DESC', (user_id, date))
+    cur.execute('''
+        SELECT c.name as category, h.name as habit, a.hours, a.id
+        FROM activities a
+        JOIN habits h ON a.habit_id = h.id
+        JOIN classifications c ON h.classification_id = c.id
+        WHERE a.user_id = %s AND a.date = %s
+        ORDER BY c.name, h.name
+    ''', (user_id, date))
     activities = cur.fetchall()
     cur.close()
     conn.close()
-    return [dict(activity) for activity in activities]
+    
+    grouped_activities = defaultdict(list)
+    for activity in activities:
+        grouped_activities[activity['category']].append(activity)
+    
+    return dict(grouped_activities)
 
-def add_activity(user_id, date, activity, category, hours):
+def get_summary(user_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('INSERT INTO activities (user_id, date, activity, category, hours) VALUES (%s, %s, %s, %s, %s)',
-                 (user_id, date, activity, category, hours))
+    cur.execute('''
+        SELECT c.name as category, SUM(a.hours) as total_hours
+        FROM activities a
+        JOIN habits h ON a.habit_id = h.id
+        JOIN classifications c ON h.classification_id = c.id
+        WHERE a.user_id = %s
+        GROUP BY c.name
+    ''', (user_id,))
+    summary = cur.fetchall()
+    cur.close()
+    conn.close()
+    return summary
+
+def get_habits(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM habits WHERE user_id = %s', (user_id,))
+    habits = cur.fetchall()
+    cur.close()
+    conn.close()
+    return habits
+
+def get_classifications(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM classifications WHERE user_id = %s', (user_id,))
+    classifications = cur.fetchall()
+    cur.close()
+    conn.close()
+    return classifications
+
+def add_activity(user_id, date, habit_id, hours):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('INSERT INTO activities (user_id, date, habit_id, hours) VALUES (%s, %s, %s, %s)',
+                 (user_id, date, habit_id, hours))
     conn.commit()
     cur.close()
     conn.close()
 
-def update_activity(activity_id, user_id, date, activity, category, hours):
+def update_activity(activity_id, user_id, date, habit_id, hours):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('UPDATE activities SET date = %s, activity = %s, category = %s, hours = %s WHERE id = %s AND user_id = %s',
-                 (date, activity, category, hours, activity_id, user_id))
+    cur.execute('UPDATE activities SET date = %s, habit_id = %s, hours = %s WHERE id = %s AND user_id = %s',
+                 (date, habit_id, hours, activity_id, user_id))
     conn.commit()
     cur.close()
     conn.close()
@@ -103,45 +166,17 @@ def update_activity(activity_id, user_id, date, activity, category, hours):
 def get_activity(activity_id, user_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM activities WHERE id = %s AND user_id = %s', (activity_id, user_id))
+    cur.execute('''
+        SELECT a.*, h.name as habit_name, c.name as category_name
+        FROM activities a
+        JOIN habits h ON a.habit_id = h.id
+        JOIN classifications c ON h.classification_id = c.id
+        WHERE a.id = %s AND a.user_id = %s
+    ''', (activity_id, user_id))
     activity = cur.fetchone()
     cur.close()
     conn.close()
     return dict(activity) if activity else None
-
-def generate_grid_data(user_id):
-    today = datetime.now().date()
-    start_date = today - timedelta(days=364)
-    
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM activities WHERE user_id = %s AND date >= %s', 
-                              (user_id, start_date.isoformat()))
-    activities = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    date_activities = defaultdict(list)
-    for activity in activities:
-        date_activities[activity['date']].append(dict(activity))
-    
-    grid_data = []
-    for i in range(365):
-        date = (start_date + timedelta(days=i)).isoformat()
-        daily_activities = date_activities.get(date, [])
-        total_hours = sum(activity['hours'] for activity in daily_activities)
-        category_hours = Counter()
-        for activity in daily_activities:
-            category_hours[activity['category']] += activity['hours']
-        
-        summary = [f"{category}: {hours:.1f}h" for category, hours in category_hours.items()]
-        grid_data.append({
-            "date": date,
-            "hours": total_hours,
-            "summary": summary
-        })
-    
-    return grid_data
 
 @app.route('/login')
 def login():
@@ -177,25 +212,49 @@ def login_required(f):
 @login_required
 def index():
     if request.method == 'POST':
-        activity = request.form.get('activity')
-        category = request.form.get('category') or classify_activity(activity)
+        habit_id = request.form.get('habit_id')
         hours = float(request.form.get('hours'))
         date = datetime.now().strftime("%Y-%m-%d")
         
-        add_activity(session['user_id'], date, activity, category, hours)
+        add_activity(session['user_id'], date, habit_id, hours)
         flash('Activity added successfully!', 'success')
         return redirect(url_for('index'))
     
     today = datetime.now().date()
-    activities = get_activities(session['user_id'], today.isoformat())
-    grid_data = generate_grid_data(session['user_id'])
-    return render_template('index.html', activities=activities, grid_data=grid_data, current_date=today.isoformat(), config=app.config)
+    activities = get_activities_grouped(session['user_id'], today.isoformat())
+    summary = get_summary(session['user_id'])
+    habits = get_habits(session['user_id'])
+    classifications = get_classifications(session['user_id'])
+    return render_template('index.html', activities=activities, summary=summary, habits=habits, classifications=classifications, current_date=today.isoformat(), config=app.config)
 
-@app.route('/activities/<date>')
+@app.route('/add_habit', methods=['POST'])
 @login_required
-def get_activities_for_date(date):
-    activities = get_activities(session['user_id'], date)
-    return jsonify(activities)
+def add_habit():
+    habit_name = request.form.get('habit_name')
+    classification_id = request.form.get('classification_id')
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('INSERT INTO habits (user_id, name, classification_id) VALUES (%s, %s, %s)',
+                (session['user_id'], habit_name, classification_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash('New habit added successfully!', 'success')
+    return redirect(url_for('index'))
+
+@app.route('/add_classification', methods=['POST'])
+@login_required
+def add_classification():
+    classification_name = request.form.get('classification_name')
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('INSERT INTO classifications (user_id, name) VALUES (%s, %s)',
+                (session['user_id'], classification_name))
+    conn.commit()
+    cur.close()
+    conn.close()
+    flash('New classification added successfully!', 'success')
+    return redirect(url_for('index'))
 
 @app.route('/edit/<int:activity_id>', methods=['GET', 'POST'])
 @login_required
@@ -206,16 +265,16 @@ def edit_activity(activity_id):
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        new_activity = request.form.get('activity')
-        new_category = request.form.get('category') or classify_activity(new_activity)
+        new_habit_id = request.form.get('habit_id')
         new_hours = float(request.form.get('hours'))
         new_date = request.form.get('date')
         
-        update_activity(activity_id, session['user_id'], new_date, new_activity, new_category, new_hours)
+        update_activity(activity_id, session['user_id'], new_date, new_habit_id, new_hours)
         flash('Activity updated successfully!', 'success')
         return redirect(url_for('index'))
 
-    return render_template('edit_activity.html', activity=activity)
+    habits = get_habits(session['user_id'])
+    return render_template('edit_activity.html', activity=activity, habits=habits)
 
 @app.route('/admin/query', methods=['GET', 'POST'])
 @login_required
