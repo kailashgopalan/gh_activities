@@ -4,27 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Query</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="container">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="{{ url_for('index') }}">Habit Tracker</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
         <h1>Admin Query</h1>
-        <p><a href="{{ url_for('index') }}">Back to Activity Logger</a></p>
-        <form method="POST">
-            <textarea name="query" rows="4" cols="50" placeholder="Enter your SQL query here">{{ query }}</textarea>
-            <button type="submit">Execute Query</button>
+        <form method="post">
+            <div class="form-group">
+                <label for="query">SQL Query:</label>
+                <textarea class="form-control" id="query" name="query" rows="4" required>{{ query }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Execute Query</button>
         </form>
-        
+
         {% if error %}
-        <div class="error">
-            <h2>Error:</h2>
-            <pre>{{ error }}</pre>
+        <div class="alert alert-danger mt-3">
+            {{ error }}
         </div>
         {% endif %}
 
         {% if results %}
-        <h2>Query Results:</h2>
-        <table>
+        <h2 class="mt-4">Results:</h2>
+        <table class="table table-striped">
             <thead>
                 <tr>
                     {% for column in results[0].keys() %}
@@ -35,7 +54,7 @@
             <tbody>
                 {% for row in results %}
                 <tr>
-                    {% for value in row %}
+                    {% for value in row.values() %}
                     <td>{{ value }}</td>
                     {% endfor %}
                 </tr>
@@ -44,5 +63,9 @@
         </table>
         {% endif %}
     </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

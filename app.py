@@ -1,6 +1,5 @@
 import importlib.metadata
 import sys
-
 sys.modules['importlib_metadata'] = importlib.metadata
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort
@@ -52,90 +51,25 @@ def init_db():
     # Drop existing tables
     cur.execute("DROP TABLE IF EXISTS activities")
     cur.execute("DROP TABLE IF EXISTS habits")
-    cur.execute("DROP TABLE IF EXISTS classifications")
     
     # Create tables with new schema
-    cur.execute('''CREATE TABLE classifications
-                   (id SERIAL PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    name TEXT NOT NULL)''')
     cur.execute('''CREATE TABLE habits
                    (id SERIAL PRIMARY KEY,
                     user_id TEXT NOT NULL,
                     name TEXT NOT NULL,
-                    classification_id INTEGER REFERENCES classifications(id))''')
+                    emoji TEXT NOT NULL)''')
     cur.execute('''CREATE TABLE activities
                    (id SERIAL PRIMARY KEY,
                     user_id TEXT NOT NULL,
                     date DATE NOT NULL,
                     habit_id INTEGER REFERENCES habits(id),
+                    description TEXT NOT NULL,
                     hours REAL NOT NULL)''')
     
     conn.commit()
     cur.close()
     conn.close()
     print("Database initialized with new schema.")
-
-
-def classify_activity(activity, user_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT name FROM classifications WHERE user_id = %s', (user_id,))
-    user_classifications = [row['name'] for row in cur.fetchall()]
-    cur.close()
-    conn.close()
-
-    classifications = "fitness, reading, housework, drive, cooking, playtime, " + ", ".join(user_classifications)
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that classifies activities into categories."},
-                {"role": "user", "content": f"Classify the following activity into one of these categories: {classifications}. Only respond with the category name. Activity: {activity}"}
-            ]
-        )
-        return response.choices[0].message.content.strip().lower()
-    except Exception as e:
-        print(f"Error in classification: {e}")
-        return 'other'
-
-def get_activities_grouped(user_id, date):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT c.name as category, h.name as habit, a.hours, a.id
-        FROM activities a
-        JOIN habits h ON a.habit_id = h.id
-        JOIN classifications c ON h.classification_id = c.id
-        WHERE a.user_id = %s AND a.date = %s
-        ORDER BY c.name, h.name
-    ''', (user_id, date))
-    activities = cur.fetchall()
-    cur.close()
-    conn.close()
-    
-    grouped_activities = defaultdict(list)
-    for activity in activities:
-        grouped_activities[activity['category']].append(dict(activity))
-    
-    return dict(grouped_activities)
-
-def get_summary(user_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT c.name as category, SUM(a.hours) as total_hours
-        FROM activities a
-        JOIN habits h ON a.habit_id = h.id
-        JOIN classifications c ON h.classification_id = c.id
-        WHERE a.user_id = %s
-        GROUP BY c.name
-    ''', (user_id,))
-    summary = cur.fetchall()
-    cur.close()
-    conn.close()
-    return summary
 
 def get_habits(user_id):
     conn = get_db_connection()
@@ -144,49 +78,118 @@ def get_habits(user_id):
     habits = cur.fetchall()
     cur.close()
     conn.close()
-    return habits
+    return [dict(habit) for habit in habits]
 
-def get_classifications(user_id):
+def add_habit(user_id, habit_name):
+    emoji = generate_emoji(habit_name)
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM classifications WHERE user_id = %s', (user_id,))
-    classifications = cur.fetchall()
+    cur.execute('INSERT INTO habits (user_id, name, emoji) VALUES (%s, %s, %s) RETURNING id',
+                (user_id, habit_name, emoji))
+    habit_id = cur.fetchone()[0]
+    conn.commit()
     cur.close()
     conn.close()
-    return classifications
+    return habit_id
 
-def add_activity(user_id, date, habit_id, hours):
+def generate_emoji(habit_name):
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that generates emojis."},
+                {"role": "user", "content": f"Generate a single emoji that best represents the habit: {habit_name}. Respond with only the emoji."}
+            ]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error in emoji generation: {e}")
+        return "😊"  # Default emoji if generation fails
+
+def classify_activity(activity_description, user_habits):
+    habit_names = [habit['name'] for habit in user_habits]
+    habits_str = ", ".join(habit_names)
+    try:
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that classifies activities into habits."},
+                {"role": "user", "content": f"Classify the following activity into one of these habits: {habits_str}. Only respond with the habit name. Activity: {activity_description}"}
+            ]
+        )
+        classified_habit = response.choices[0].message.content.strip()
+        for habit in user_habits:
+            if habit['name'].lower() == classified_habit.lower():
+                return habit['id']
+        return None  # If no match found
+    except Exception as e:
+        print(f"Error in classification: {e}")
+        return None
+
+def add_activity(user_id, date, habit_id, description, hours):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('INSERT INTO activities (user_id, date, habit_id, hours) VALUES (%s, %s, %s, %s)',
-                 (user_id, date, habit_id, hours))
+    cur.execute('INSERT INTO activities (user_id, date, habit_id, description, hours) VALUES (%s, %s, %s, %s, %s)',
+                 (user_id, date, habit_id, description, hours))
     conn.commit()
     cur.close()
     conn.close()
 
-def update_activity(activity_id, user_id, date, habit_id, hours):
+def get_activities(user_id, date):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('UPDATE activities SET date = %s, habit_id = %s, hours = %s WHERE id = %s AND user_id = %s',
-                 (date, habit_id, hours, activity_id, user_id))
-    conn.commit()
+    cur.execute('''
+        SELECT a.*, h.name as habit_name, h.emoji
+        FROM activities a
+        JOIN habits h ON a.habit_id = h.id
+        WHERE a.user_id = %s AND a.date = %s
+        ORDER BY a.id DESC
+    ''', (user_id, date))
+    activities = cur.fetchall()
     cur.close()
     conn.close()
+    return [dict(activity) for activity in activities]
+
+def get_summary(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT h.name as habit, h.emoji, SUM(a.hours) as total_hours
+        FROM activities a
+        JOIN habits h ON a.habit_id = h.id
+        WHERE a.user_id = %s
+        GROUP BY h.id, h.name, h.emoji
+    ''', (user_id,))
+    summary = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [dict(item) for item in summary]
 
 def get_activity(activity_id, user_id):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('''
-        SELECT a.*, h.name as habit_name, c.name as category_name
+        SELECT a.*, h.name as habit_name, h.emoji
         FROM activities a
         JOIN habits h ON a.habit_id = h.id
-        JOIN classifications c ON h.classification_id = c.id
         WHERE a.id = %s AND a.user_id = %s
     ''', (activity_id, user_id))
     activity = cur.fetchone()
     cur.close()
     conn.close()
     return dict(activity) if activity else None
+
+def update_activity(activity_id, user_id, date, habit_id, description, hours):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        UPDATE activities 
+        SET date = %s, habit_id = %s, description = %s, hours = %s 
+        WHERE id = %s AND user_id = %s
+    ''', (date, habit_id, description, hours, activity_id, user_id))
+    conn.commit()
+    cur.close()
+    conn.close()
 
 @app.route('/login')
 def login():
@@ -198,6 +201,7 @@ def logout():
     session.pop('google_token', None)
     session.pop('user_id', None)
     session.pop('email', None)
+    session.pop('name', None)
     return redirect(url_for('index'))
 
 @app.route('/callback')
@@ -208,6 +212,7 @@ def authorized():
     session['google_token'] = token
     session['user_id'] = user_info['id']
     session['email'] = user_info['email']
+    session['name'] = user_info.get('name', 'User')
     return redirect(url_for('index'))
 
 def login_required(f):
@@ -222,49 +227,31 @@ def login_required(f):
 @login_required
 def index():
     if request.method == 'POST':
-        habit_id = request.form.get('habit_id')
-        hours = float(request.form.get('hours'))
-        date = datetime.now().strftime("%Y-%m-%d")
-        
-        add_activity(session['user_id'], date, habit_id, hours)
-        flash('Activity added successfully!', 'success')
+        action = request.form.get('action')
+        if action == 'add_habit':
+            habit_name = request.form.get('habit_name')
+            add_habit(session['user_id'], habit_name)
+            flash('New habit added successfully!', 'success')
+        elif action == 'add_activity':
+            description = request.form.get('description')
+            hours = float(request.form.get('hours'))
+            date = datetime.now().strftime("%Y-%m-%d")
+            habits = get_habits(session['user_id'])
+            habit_id = classify_activity(description, habits)
+            if habit_id:
+                add_activity(session['user_id'], date, habit_id, description, hours)
+                flash('Activity added and classified successfully!', 'success')
+            else:
+                flash('Could not classify activity. Please try again.', 'error')
         return redirect(url_for('index'))
     
     today = datetime.now().date()
-    activities = get_activities_grouped(session['user_id'], today.isoformat())
-    summary = get_summary(session['user_id'])
     habits = get_habits(session['user_id'])
-    classifications = get_classifications(session['user_id'])
-    return render_template('index.html', activities=activities, summary=summary, habits=habits, classifications=classifications, current_date=today.isoformat(), config=app.config)
-
-@app.route('/add_habit', methods=['POST'])
-@login_required
-def add_habit():
-    habit_name = request.form.get('habit_name')
-    classification_id = request.form.get('classification_id')
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('INSERT INTO habits (user_id, name, classification_id) VALUES (%s, %s, %s)',
-                (session['user_id'], habit_name, classification_id))
-    conn.commit()
-    cur.close()
-    conn.close()
-    flash('New habit added successfully!', 'success')
-    return redirect(url_for('index'))
-
-@app.route('/add_classification', methods=['POST'])
-@login_required
-def add_classification():
-    classification_name = request.form.get('classification_name')
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('INSERT INTO classifications (user_id, name) VALUES (%s, %s)',
-                (session['user_id'], classification_name))
-    conn.commit()
-    cur.close()
-    conn.close()
-    flash('New classification added successfully!', 'success')
-    return redirect(url_for('index'))
+    activities = get_activities(session['user_id'], today.isoformat())
+    summary = get_summary(session['user_id'])
+    return render_template('index.html', habits=habits, activities=activities, summary=summary, 
+                           current_date=today.isoformat(), user_name=session.get('name'),
+                           is_admin=(session.get('email') == app.config['ADMIN_EMAIL']))
 
 @app.route('/edit/<int:activity_id>', methods=['GET', 'POST'])
 @login_required
@@ -274,16 +261,18 @@ def edit_activity(activity_id):
         flash('Activity not found or you do not have permission to edit it.', 'error')
         return redirect(url_for('index'))
 
+    habits = get_habits(session['user_id'])
+
     if request.method == 'POST':
-        new_habit_id = request.form.get('habit_id')
-        new_hours = float(request.form.get('hours'))
-        new_date = request.form.get('date')
+        habit_id = request.form.get('habit_id')
+        description = request.form.get('description')
+        hours = float(request.form.get('hours'))
+        date = request.form.get('date')
         
-        update_activity(activity_id, session['user_id'], new_date, new_habit_id, new_hours)
+        update_activity(activity_id, session['user_id'], date, habit_id, description, hours)
         flash('Activity updated successfully!', 'success')
         return redirect(url_for('index'))
 
-    habits = get_habits(session['user_id'])
     return render_template('edit_activity.html', activity=activity, habits=habits)
 
 @app.route('/admin/query', methods=['GET', 'POST'])
@@ -316,6 +305,5 @@ def init_db_command():
     print("Initialized the database.")
 
 if __name__ == '__main__':
-    init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
