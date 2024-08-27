@@ -48,21 +48,21 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('''CREATE TABLE IF NOT EXISTS activities
-                   (id SERIAL PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    date TEXT NOT NULL,
-                    habit_id INTEGER NOT NULL,
-                    hours REAL NOT NULL)''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS habits
-                   (id SERIAL PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    name TEXT NOT NULL,
-                    classification_id INTEGER NOT NULL)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS classifications
                    (id SERIAL PRIMARY KEY,
                     user_id TEXT NOT NULL,
                     name TEXT NOT NULL)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS habits
+                   (id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    classification_id INTEGER REFERENCES classifications(id))''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS activities
+                   (id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    date DATE NOT NULL,
+                    habit_id INTEGER REFERENCES habits(id),
+                    hours REAL NOT NULL)''')
     conn.commit()
     cur.close()
     conn.close()
@@ -107,7 +107,7 @@ def get_activities_grouped(user_id, date):
     
     grouped_activities = defaultdict(list)
     for activity in activities:
-        grouped_activities[activity['category']].append(activity)
+        grouped_activities[activity['category']].append(dict(activity))
     
     return dict(grouped_activities)
 
