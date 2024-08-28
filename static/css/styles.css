@@ -182,6 +182,7 @@ canvas {
 /* Existing styles */
 
 .activity-grid-container {
+    position: relative; /* Add this */
     border: 2px solid black;
     overflow-x: auto;
     margin-bottom: 20px;
@@ -208,7 +209,7 @@ canvas {
 }
 
 .tooltip {
-    position: fixed;
+    position: absolute;
     background-color: #fff;
     border: 1px solid #333;
     padding: 10px;
@@ -216,4 +217,6 @@ canvas {
     z-index: 1000;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     max-width: 300px;
+    left: 0; /* Add this */
+    bottom: -80px; /* Adjust as needed */
 }
