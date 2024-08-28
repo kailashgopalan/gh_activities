@@ -74,7 +74,22 @@ function groupActivitiesByHabit(activities) {
 }
 
 function showEditForm(activityId) {
-    document.getElementById(`editForm${activityId}`).style.display = 'block';
+    function showEditForm(activityId) {
+        const form = document.getElementById(`editForm${activityId}`);
+        if (form) {
+            // Ensure the habit dropdown is populated
+            const habitSelect = form.querySelector('select[name="habit_id"]');
+            if (habitSelect && habitSelect.options.length === 0) {
+                habits.forEach(habit => {
+                    const option = document.createElement('option');
+                    option.value = habit.id;
+                    option.textContent = `${habit.emoji} ${habit.name}`;
+                    habitSelect.appendChild(option);
+                });
+            }
+            form.style.display = 'block';
+        }
+    }
 }
 
 function hideEditForm(activityId) {
