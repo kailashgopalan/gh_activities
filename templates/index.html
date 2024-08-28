@@ -88,7 +88,7 @@
 
         <script src="{{ url_for('static', filename='js/main.js') }}"></script>
         <script id="habits-data" type="application/json">
-            {{ habits|tojson|safe }}
+            {{ habits_json|safe }}
         </script>
         <p>Please <a href="{{ url_for('login') }}">login</a> to use the Activity Tracker.</p>
     {% endif %}
