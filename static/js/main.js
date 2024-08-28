@@ -187,6 +187,10 @@ function createActivityGrid(gridData) {
     // Sort gridData by date
     gridData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    // Get current date
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+
     // Calculate the number of weeks
     const weeks = Math.ceil(gridData.length / 7);
     
@@ -198,12 +202,19 @@ function createActivityGrid(gridData) {
     for (let weekIndex = 0; weekIndex < weeks; weekIndex++) {
         for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
             if (dayIndex < gridData.length) {
-                gridArray[weekIndex][dayOfWeek] = gridData[dayIndex];
-                dayIndex++;
+                const cellDate = new Date(gridData[dayIndex].date);
+                if (cellDate <= currentDate) {
+                    gridArray[weekIndex][dayOfWeek] = gridData[dayIndex];
+                    dayIndex++;
+                } else {
+                    // Stop populating if we've reached the current date
+                    break;
+                }
             } else {
                 break;
             }
         }
+        if (dayIndex >= gridData.length) break;
     }
 
     // Create activity cells
@@ -219,13 +230,13 @@ function createActivityGrid(gridData) {
             cell.style.border = '1px solid #fff';  
             cell.style.cursor = 'pointer';
 
-            if (day && day.hours > 0) {
-                const intensity = Math.min(day.hours / 5, 1);
-                cell.style.backgroundColor = `rgba(0, 128, 0, ${intensity})`;
-                totalDays++;
-            }
-
             if (day) {
+                if (day.hours > 0) {
+                    const intensity = Math.min(day.hours / 5, 1);
+                    cell.style.backgroundColor = `rgba(0, 128, 0, ${intensity})`;
+                    totalDays++;
+                }
+
                 cell.addEventListener('mouseover', (e) => {
                     const rect = e.target.getBoundingClientRect();
                     const containerRect = gridContainer.getBoundingClientRect();
