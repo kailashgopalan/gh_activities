@@ -10,13 +10,20 @@ h1, h2 {
 .habit-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 15px;
+    margin-bottom: 30px;
 }
 .habit-item {
     background-color: #f0f0f0;
-    padding: 5px 10px;
-    border-radius: 5px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+.habit-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 .tab {
     overflow: hidden;
@@ -222,4 +229,98 @@ canvas {
     max-width: 300px;
     left: 0; /* Add this */
     bottom: 0; /* Position at the bottom of the container */
+}
+
+/* Activity Form */
+.add-activity-form {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.add-activity-form h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.add-activity-form select,
+.add-activity-form input[type="text"],
+.add-activity-form input[type="number"],
+.add-activity-form input[type="date"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.add-activity-form button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.add-activity-form button:hover {
+    background-color: #45a049;
+}
+
+/* habit form */
+.add-habit-form {
+    background-color: #f0f8ff; /* Light blue background */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.add-habit-form h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.add-habit-form input[type="text"] {
+    width: calc(100% - 120px); /* Adjust based on button width */
+    padding: 10px;
+    margin-right: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.add-habit-form button {
+    background-color: #007bff; /* Blue color for distinction */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.add-habit-form button:hover {
+    background-color: #0056b3;
+}
+
+/* For mobile responsiveness */
+@media (max-width: 600px) {
+    .add-habit-form input[type="text"] {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+
+    .add-habit-form button {
+        width: 100%;
+    }
 }
