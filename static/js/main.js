@@ -187,60 +187,83 @@ function createActivityGrid(gridData) {
     // Calculate the number of weeks
     const weeks = Math.ceil(gridData.length / 7);
     
-    gridData.forEach((day, index) => {
-        const cell = document.createElement('div');
-        cell.className = 'activity-cell';
-        // Set default background color
-        cell.style.width = '30px';
-        cell.style.height = '30px';
-        cell.style.display = 'inline-block';
-        cell.style.backgroundColor = '#ebedf0';
-        cell.style.border = '1px solid #fff';  
-        cell.style.cursor = 'pointer';
+    // Sort gridData by date
+    gridData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        if (day.hours > 0) {
-            const intensity = Math.min(day.hours / 5, 1);
-            cell.style.backgroundColor = `rgba(0, 128, 0, ${intensity})`;
-            totalDays++;
+    // Create a 2D array to represent the grid (weeks x 7 days)
+    const gridArray = Array(weeks).fill().map(() => Array(7).fill(null));
+
+    // Fill the gridArray with data
+    let weekIndex = 0;
+    let dayIndex = new Date(gridData[0].date).getDay(); // Start with the correct day of week
+    
+    gridData.forEach(day => {
+        gridArray[weekIndex][dayIndex] = day;
+        dayIndex++;
+        if (dayIndex === 7) {
+            dayIndex = 0;
+            weekIndex++;
         }
+    });
 
-        cell.addEventListener('mouseover', (e) => {
-            const rect = e.target.getBoundingClientRect();
-            const containerRect = gridContainer.getBoundingClientRect();
+// Create activity cells
+    gridArray.forEach(week => {
+        week.forEach(day => {
+            const cell = document.createElement('div');
+            cell.className = 'activity-cell';
+            cell.style.width = '30px';
+            cell.style.height = '30px';
+            cell.style.display = 'inline-block';
+            cell.style.backgroundColor = '#ebedf0';
+            cell.style.border = '1px solid #fff';  
+            cell.style.cursor = 'pointer';
 
-            // Calculate position relative to the grid container
-            let left = rect.left - containerRect.left + gridContainer.scrollLeft;
-            
-            // Ensure the tooltip doesn't go off the right edge
-            if (left + 300 > containerRect.width) {
-                left = containerRect.width - 300;
+            if (day && day.hours > 0) {
+                const intensity = Math.min(day.hours / 5, 1);
+                cell.style.backgroundColor = `rgba(0, 128, 0, ${intensity})`;
+                totalDays++;
             }
 
-            tooltip.style.left = `${left}px`;
-            tooltip.style.bottom = '200px'; // Adjust this value as needed
-            tooltip.style.top = 'auto'; // Remove top positioning
+            if (day) {
+                cell.addEventListener('mouseover', (e) => {
+                    const rect = e.target.getBoundingClientRect();
+                    const containerRect = gridContainer.getBoundingClientRect();
 
-            const habitSummary = day.summary.reduce((acc, activity) => {
-                const [habit, hours] = activity.split(': ');
-                acc[habit] = (acc[habit] || 0) + parseFloat(hours);
-                return acc;
-            }, {});
+                    // Calculate position relative to the grid container
+                    let left = rect.left - containerRect.left + gridContainer.scrollLeft;
+                    
+                    // Ensure the tooltip doesn't go off the right edge
+                    if (left + 300 > containerRect.width) {
+                        left = containerRect.width - 300;
+                    }
 
-            let tooltipContent = `<strong>${day.date}</strong><br>Total Hours: ${day.hours.toFixed(1)}<br><br>`;
-            for (const [habit, hours] of Object.entries(habitSummary)) {
-                tooltipContent += `${habit}: ${hours.toFixed(1)} hours<br>`;
+                    tooltip.style.left = `${left}px`;
+                    tooltip.style.bottom = '200px'; // Adjust this value as needed
+                    tooltip.style.top = 'auto'; // Remove top positioning
+
+                    const habitSummary = day.summary.reduce((acc, activity) => {
+                        const [habit, hours] = activity.split(': ');
+                        acc[habit] = (acc[habit] || 0) + parseFloat(hours);
+                        return acc;
+                    }, {});
+
+                    let tooltipContent = `<strong>${day.date}</strong><br>Total Hours: ${day.hours.toFixed(1)}<br><br>`;
+                    for (const [habit, hours] of Object.entries(habitSummary)) {
+                        tooltipContent += `${habit}: ${hours.toFixed(1)} hours<br>`;
+                    }
+
+                    tooltip.innerHTML = tooltipContent;
+                    tooltip.style.display = 'block';
+                    tooltip.style.border = '1px solid #333';
+                });
+
+                cell.addEventListener('mouseout', () => {
+                    tooltip.style.display = 'none';
+                });
             }
 
-            tooltip.innerHTML = tooltipContent;
-            tooltip.style.display = 'block';
-            tooltip.style.border = '1px solid #333';
+            grid.appendChild(cell);
         });
-
-        cell.addEventListener('mouseout', () => {
-            tooltip.style.display = 'none';
-        });
-
-        grid.appendChild(cell);
     });
 
     document.getElementById('totalDays').textContent = totalDays;
