@@ -229,7 +229,7 @@ function createActivityGrid(gridData) {
             const cellDate = new Date(day.date);
             if (cellDate > currentDate) {
                 // Style for future dates
-                cell.style.backgroundColor = '#f0f0f0'; // Lighter gray for future dates
+                cell.style.backgroundColor = '#ffffff'; // Lighter gray for future dates
                 cell.style.cursor = 'default';
             } else if (day.hours > 0) {
                 const intensity = Math.min(day.hours / 5, 1);
