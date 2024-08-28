@@ -214,6 +214,7 @@ canvas {
     grid-template-columns: repeat(53, 1fr);
     gap: 1px;
     min-width: 1060px; /* 53 cells * (15px width + 1px gap) */
+    width: fit-content;
 }
 
 .activity-cell {
