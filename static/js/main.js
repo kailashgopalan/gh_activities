@@ -31,6 +31,8 @@ function updateActivityLog(activities) {
     activityLog.innerHTML = '';
     const groupedActivities = groupActivitiesByHabit(activities);
     
+    console.log('Habits available:', habits); // Debug log
+
     for (const [habit, habitActivities] of Object.entries(groupedActivities)) {
         const habitRow = document.createElement('tr');
         habitRow.className = 'activity-group';
@@ -38,7 +40,19 @@ function updateActivityLog(activities) {
         activityLog.appendChild(habitRow);
 
         habitActivities.forEach(activity => {
+            console.log('Processing activity:', activity); // Debug log
             const activityRow = document.createElement('tr');
+
+            let habitOptionsHtml = '';
+            try {
+                habitOptionsHtml = habits.map(h => 
+                    `<option value="${h.id}" ${h.id === activity.habit_id ? 'selected' : ''}>${h.emoji} ${h.name}</option>`
+                ).join('');
+            } catch (error) {
+                console.error('Error generating habit options:', error);
+                habitOptionsHtml = '<option value="">Error loading habits</option>';
+            }
+
             activityRow.innerHTML = `
                 <td>${activity.emoji}</td>
                 <td>${activity.description}</td>
@@ -47,7 +61,9 @@ function updateActivityLog(activities) {
                     <button onclick="showEditForm(${activity.id})">Edit</button>
                     <button onclick="deleteActivity(${activity.id})">Delete</button>
                     <form id="editForm${activity.id}" class="edit-form" onsubmit="return updateActivity(${activity.id})">
-                        <select name="habit_id" required></select>
+                        <select name="habit_id" required>
+                            ${habitOptionsHtml}
+                        </select>
                         <input type="text" name="description" value="${activity.description}" required>
                         <input type="number" name="hours" value="${activity.hours}" step="0.1" min="0" required>
                         <button type="submit">Save</button>
@@ -55,6 +71,7 @@ function updateActivityLog(activities) {
                     </form>
                 </td>
             `;
+            activityRow.querySelector('form').addEventListener('submit', (e) => updateActivity(e, activity.id));
             activityLog.appendChild(activityRow);
         });
     }
@@ -72,10 +89,13 @@ function groupActivitiesByHabit(activities) {
 }
 
 function showEditForm(activityId) {
+    console.log(`Showing edit form for activity ${activityId}`);
     const form = document.getElementById(`editForm${activityId}`);
     if (form) {
         // Ensure the habit dropdown is populated
         const habitSelect = form.querySelector('select[name="habit_id"]');
+        console.log('Habit options before:', habitSelect.options.length);
+        console.log('Habit select HTML:', habitSelect.innerHTML);
         if (habitSelect && habitSelect.options.length === 0) {
             habits.forEach(habit => {
                 const option = document.createElement('option');
