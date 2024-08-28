@@ -221,5 +221,5 @@ canvas {
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     max-width: 300px;
     left: 0; /* Add this */
-    bottom: -60px; /* Adjust as needed */
+    bottom: 0; /* Position at the bottom of the container */
 }
