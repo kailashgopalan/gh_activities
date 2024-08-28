@@ -179,69 +179,184 @@ function refreshData() {
 function createActivityGrid(gridData) {
     const grid = document.getElementById('activityGrid');
     const gridContainer = document.querySelector('.activity-grid-container');
+    
     const tooltip = document.getElementById('tooltip');
     let totalDays = 0;
 
     grid.innerHTML = '';
     
+     // Highlight start: Add month and day label containers
+     const monthLabels = document.createElement('div');
+     monthLabels.className = 'month-labels';
+     monthLabels.style.display = 'flex';
+     monthLabels.style.marginLeft = '30px';
+ 
+     const dayLabels = document.createElement('div');
+     dayLabels.className = 'day-labels';
+     dayLabels.style.display = 'grid';
+     dayLabels.style.gridTemplateRows = 'repeat(7, 1fr)';
+     dayLabels.style.gap = '1px';
+     dayLabels.style.height = 'auto'; // Allow it to fill the height
+     dayLabels.style.flexDirection = 'column';
+     dayLabels.style.width = '30px';
+     dayLabels.style.marginRight = '4px';
+ 
+     const gridWithDays = document.createElement('div');
+     gridWithDays.style.display = 'flex';
+     gridWithDays.style.width = '100%';
+ 
+     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      // Highlight end
+
+    // Sort gridData by date
+    gridData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Get current date
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+
     // Calculate the number of weeks
-    const weeks = Math.ceil(gridData.length / 7);
+    const weeks = Math.ceil(365 / 7); // Always create a full year of cells
     
-    gridData.forEach((day, index) => {
-        const cell = document.createElement('div');
-        cell.className = 'activity-cell';
-        // Set default background color
-        cell.style.width = '30px';
-        cell.style.height = '30px';
-        cell.style.display = 'inline-block';
-        cell.style.backgroundColor = '#ebedf0';
-        cell.style.border = '1px solid #fff';  
-        cell.style.cursor = 'pointer';
+    // Create a 2D array to represent the grid (weeks x 7 days)
+    const gridArray = Array(weeks).fill().map(() => Array(7).fill(null));
 
-        if (day.hours > 0) {
-            const intensity = Math.min(day.hours / 5, 1);
-            cell.style.backgroundColor = `rgba(0, 128, 0, ${intensity})`;
-            totalDays++;
-        }
-
-        cell.addEventListener('mouseover', (e) => {
-            const rect = e.target.getBoundingClientRect();
-            const containerRect = gridContainer.getBoundingClientRect();
-
-            // Calculate position relative to the grid container
-            let left = rect.left - containerRect.left + gridContainer.scrollLeft;
+    // Fill the gridArray with data
+    let dayIndex = 0;
+    const startDate = new Date(gridData[0].date);
+    for (let weekIndex = 0; weekIndex < weeks; weekIndex++) {
+        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+            const cellDate = new Date(startDate);
+            cellDate.setDate(startDate.getDate() + (weekIndex * 7 + dayOfWeek));
             
-            // Ensure the tooltip doesn't go off the right edge
-            if (left + 300 > containerRect.width) {
-                left = containerRect.width - 300;
+            if (cellDate <= currentDate && dayIndex < gridData.length) {
+                gridArray[weekIndex][dayOfWeek] = gridData[dayIndex];
+                dayIndex++;
+            } else {
+                gridArray[weekIndex][dayOfWeek] = { date: cellDate, hours: 0, summary: [] };
             }
+        }
+    }
 
-            tooltip.style.left = `${left}px`;
-            tooltip.style.bottom = '200px'; // Adjust this value as needed
-            tooltip.style.top = 'auto'; // Remove top positioning
+    // Highlight start: Create month labels
+    let currentMonth = -1;
+    for (let weekIndex = 0; weekIndex < weeks; weekIndex++) {
+        const cellDate = new Date(startDate);
+        cellDate.setDate(startDate.getDate() + (weekIndex * 7));
+        if (cellDate.getMonth() !== currentMonth) {
+            currentMonth = cellDate.getMonth();
+            const monthLabel = document.createElement('div');
+            monthLabel.textContent = months[currentMonth];
+            // Highlight start
+            monthLabel.style.flex = '1';
+            // Highlight end
+            monthLabel.style.width = `${30 * 4}px`;
+            monthLabels.appendChild(monthLabel);
+        }
+    }
 
-            const habitSummary = day.summary.reduce((acc, activity) => {
-                const [habit, hours] = activity.split(': ');
-                acc[habit] = (acc[habit] || 0) + parseFloat(hours);
-                return acc;
-            }, {});
-
-            let tooltipContent = `<strong>${day.date}</strong><br>Total Hours: ${day.hours.toFixed(1)}<br><br>`;
-            for (const [habit, hours] of Object.entries(habitSummary)) {
-                tooltipContent += `${habit}: ${hours.toFixed(1)} hours<br>`;
-            }
-
-            tooltip.innerHTML = tooltipContent;
-            tooltip.style.display = 'block';
-            tooltip.style.border = '1px solid #333';
-        });
-
-        cell.addEventListener('mouseout', () => {
-            tooltip.style.display = 'none';
-        });
-
-        grid.appendChild(cell);
+    // Create day labels
+    days.forEach(day => {
+        const dayLabel = document.createElement('div');
+        dayLabel.textContent = day[0];
+        dayLabel.style.height = '30px';
+        dayLabel.style.display = 'flex';
+        dayLabel.style.alignItems = 'center';
+        dayLabel.style.justifyContent = 'center';
+        dayLabels.appendChild(dayLabel);
     });
+    // Highlight end
+
+    // Create activity cells
+    for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+        for (let weekIndex = 0; weekIndex < weeks; weekIndex++) {
+            const day = gridArray[weekIndex][dayOfWeek];
+            const cell = document.createElement('div');
+            cell.className = 'activity-cell';
+            
+            // Highlight start
+            cell.style.width = '100%';
+            cell.style.paddingBottom = '100%';
+            cell.style.position = 'relative';
+            // Highlight end
+            //cell.style.width = '30px';
+            //cell.style.height = '30px';
+            //cell.style.display = 'inline-block';
+            
+            cell.style.border = '1px solid #fff';
+            cell.style.cursor = 'pointer';
+
+            const cellDate = new Date(day.date);
+            if (cellDate > currentDate) {
+                // Style for future dates
+                cell.style.backgroundColor = '#ffffff'; // Lighter gray for future dates
+                cell.style.cursor = 'default';
+            } else if (day.hours > 0) {
+                const intensity = Math.min(day.hours / 5, 1);
+                cell.style.backgroundColor = `rgba(0, 128, 0, ${intensity})`;
+                totalDays++;
+            } else {
+                cell.style.backgroundColor = '#ebedf0'; // Original color for days with no activity
+            }
+
+            if (cellDate <= currentDate) {
+                cell.addEventListener('mouseover', (e) => {
+                    const rect = e.target.getBoundingClientRect();
+                    const containerRect = gridContainer.getBoundingClientRect();
+
+                    // Calculate position relative to the grid container
+                    let left = rect.left - containerRect.left + gridContainer.scrollLeft;
+                    
+                    // Ensure the tooltip doesn't go off the right edge
+                    if (left + 300 > containerRect.width) {
+                        left = containerRect.width - 300;
+                    }
+
+                    tooltip.style.left = `${left}px`;
+                    tooltip.style.bottom = '0px'; // Adjust this value as needed
+                    tooltip.style.top = 'auto'; // Remove top positioning
+
+                    const habitSummary = day.summary.reduce((acc, activity) => {
+                        const [habit, hours] = activity.split(': ');
+                        acc[habit] = (acc[habit] || 0) + parseFloat(hours);
+                        return acc;
+                    }, {});
+
+                    let tooltipContent = `<strong>${day.date}</strong><br>Total Hours: ${day.hours.toFixed(1)}<br><br>`;
+                    for (const [habit, hours] of Object.entries(habitSummary)) {
+                        tooltipContent += `${habit}: ${hours.toFixed(1)} hours<br>`;
+                    }
+
+                    tooltip.innerHTML = tooltipContent;
+                    tooltip.style.display = 'block';
+                    tooltip.style.border = '1px solid #333';
+                });
+
+                cell.addEventListener('mouseout', () => {
+                    tooltip.style.display = 'none';
+                });
+            }
+
+            grid.appendChild(cell);
+        }
+    }
+
+    // Highlight start
+    // Replace the existing grid style settings with these
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = `repeat(${weeks}, 1fr)`;
+    grid.style.gap = '1px';
+    grid.style.width = 'calc(100% - 30px)'; // Subtract the width of day labels
+    // Highlight end
+    
+    // Highlight start: Append labels and grid to container
+    gridWithDays.appendChild(dayLabels);
+    gridWithDays.appendChild(grid);
+    gridContainer.innerHTML = '';
+    gridContainer.appendChild(monthLabels);
+    gridContainer.appendChild(gridWithDays);
+    // Highlight end
 
     document.getElementById('totalDays').textContent = totalDays;
 }
