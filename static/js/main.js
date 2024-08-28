@@ -217,7 +217,7 @@ function createActivityGrid(gridData) {
             }
 
             tooltip.style.left = `${left}px`;
-            tooltip.style.bottom = '-10px'; // Adjust this value as needed
+            tooltip.style.bottom = '0px'; // Adjust this value as needed
             tooltip.style.top = 'auto'; // Remove top positioning
 
             const habitSummary = day.summary.reduce((acc, activity) => {
