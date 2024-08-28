@@ -1,7 +1,15 @@
 // main.js
 
 let currentDate = new Date();
-const habits = JSON.parse(document.getElementById('habits-data').textContent);
+let habits = [];
+const habitsDataElement = document.getElementById('habits-data');
+if (habitsDataElement) {
+    try {
+        habits = JSON.parse(habitsDataElement.textContent);
+    } catch (error) {
+        console.error('Error parsing habits data:', error);
+    }
+}
 
 function changeDate(days) {
     currentDate.setDate(currentDate.getDate() + days);

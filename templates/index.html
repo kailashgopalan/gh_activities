@@ -90,6 +90,7 @@
         <script id="habits-data" type="application/json">
             {{ habits_json|safe }}
         </script>
+    {% else %}
         <p>Please <a href="{{ url_for('login') }}">login</a> to use the Activity Tracker.</p>
     {% endif %}
 </body>
