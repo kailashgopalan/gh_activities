@@ -147,6 +147,7 @@ function refreshData() {
 
 function createActivityGrid(gridData) {
     const grid = document.getElementById('activityGrid');
+    const gridContainer = document.querySelector('.activity-grid-container');
     const tooltip = document.getElementById('tooltip');
     let totalDays = 0;
 
