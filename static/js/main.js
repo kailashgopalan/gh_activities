@@ -184,6 +184,26 @@ function createActivityGrid(gridData) {
 
     grid.innerHTML = '';
     
+     // Highlight start: Add month and day label containers
+     const monthLabels = document.createElement('div');
+     monthLabels.className = 'month-labels';
+     monthLabels.style.display = 'flex';
+     monthLabels.style.marginLeft = '30px';
+ 
+     const dayLabels = document.createElement('div');
+     dayLabels.className = 'day-labels';
+     dayLabels.style.display = 'flex';
+     dayLabels.style.flexDirection = 'column';
+     dayLabels.style.width = '30px';
+     dayLabels.style.marginRight = '4px';
+ 
+     const gridWithDays = document.createElement('div');
+     gridWithDays.style.display = 'flex';
+ 
+     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      // Highlight end
+
     // Sort gridData by date
     gridData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -214,6 +234,32 @@ function createActivityGrid(gridData) {
         }
     }
 
+    // Highlight start: Create month labels
+    let currentMonth = -1;
+    for (let weekIndex = 0; weekIndex < weeks; weekIndex++) {
+        const cellDate = new Date(startDate);
+        cellDate.setDate(startDate.getDate() + (weekIndex * 7));
+        if (cellDate.getMonth() !== currentMonth) {
+            currentMonth = cellDate.getMonth();
+            const monthLabel = document.createElement('div');
+            monthLabel.textContent = months[currentMonth];
+            monthLabel.style.width = `${30 * 4}px`;
+            monthLabels.appendChild(monthLabel);
+        }
+    }
+
+    // Create day labels
+    days.forEach(day => {
+        const dayLabel = document.createElement('div');
+        dayLabel.textContent = day[0];
+        dayLabel.style.height = '30px';
+        dayLabel.style.display = 'flex';
+        dayLabel.style.alignItems = 'center';
+        dayLabel.style.justifyContent = 'center';
+        dayLabels.appendChild(dayLabel);
+    });
+    // Highlight end
+
     // Create activity cells
     for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
         for (let weekIndex = 0; weekIndex < weeks; weekIndex++) {
@@ -229,7 +275,7 @@ function createActivityGrid(gridData) {
             const cellDate = new Date(day.date);
             if (cellDate > currentDate) {
                 // Style for future dates
-                cell.style.backgroundColor = '#f0f0f0'; // Lighter gray for future dates
+                cell.style.backgroundColor = '#ffffff'; // Lighter gray for future dates
                 cell.style.cursor = 'default';
             } else if (day.hours > 0) {
                 const intensity = Math.min(day.hours / 5, 1);
@@ -280,6 +326,13 @@ function createActivityGrid(gridData) {
             grid.appendChild(cell);
         }
     }
+     // Highlight start: Append labels and grid to container
+     gridWithDays.appendChild(dayLabels);
+     gridWithDays.appendChild(grid);
+     gridContainer.innerHTML = '';
+     gridContainer.appendChild(monthLabels);
+     gridContainer.appendChild(gridWithDays);
+     // Highlight end
 
     document.getElementById('totalDays').textContent = totalDays;
 }
