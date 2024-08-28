@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Activity Tracker</title>
+    <title>Habit Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <h1>Activity Tracker</h1>
+    <h1>Habit Tracker</h1>
     
     {% if 'user_id' in session %}
         <p>Welcome, {{ session.get('name', 'User') }}! 
@@ -19,7 +19,7 @@
         </p>
         
         <h2>Add New Habit</h2>
-        <form action="{{ url_for('index') }}" method="post">
+        <form class="add-habit-form" action="{{ url_for('index') }}" method="post">
             <input type="hidden" name="action" value="add_habit">
             <input type="text" name="habit_name" placeholder="New habit name" required>
             <button type="submit">Add Habit</button>
@@ -33,7 +33,7 @@
         </div>
 
         <h2>Log Activity</h2>
-        <form id="addActivityForm">
+        <form class="add-activity-form" id="addActivityForm">
             <select name="habit_id">
                 <option value="">Auto-classify</option>
                 {% for habit in habits %}
