@@ -243,6 +243,9 @@ function createActivityGrid(gridData) {
             currentMonth = cellDate.getMonth();
             const monthLabel = document.createElement('div');
             monthLabel.textContent = months[currentMonth];
+            // Highlight start
+            monthLabel.style.flex = '1';
+            // Highlight end
             monthLabel.style.width = `${30 * 4}px`;
             monthLabels.appendChild(monthLabel);
         }
@@ -266,9 +269,16 @@ function createActivityGrid(gridData) {
             const day = gridArray[weekIndex][dayOfWeek];
             const cell = document.createElement('div');
             cell.className = 'activity-cell';
-            cell.style.width = '30px';
-            cell.style.height = '30px';
-            cell.style.display = 'inline-block';
+            
+            // Highlight start
+            cell.style.width = '100%';
+            cell.style.paddingBottom = '100%';
+            cell.style.position = 'relative';
+            // Highlight end
+            //cell.style.width = '30px';
+            //cell.style.height = '30px';
+            //cell.style.display = 'inline-block';
+            
             cell.style.border = '1px solid #fff';
             cell.style.cursor = 'pointer';
 
@@ -326,13 +336,20 @@ function createActivityGrid(gridData) {
             grid.appendChild(cell);
         }
     }
-     // Highlight start: Append labels and grid to container
-     gridWithDays.appendChild(dayLabels);
-     gridWithDays.appendChild(grid);
-     gridContainer.innerHTML = '';
-     gridContainer.appendChild(monthLabels);
-     gridContainer.appendChild(gridWithDays);
-     // Highlight end
+
+    // Highlight start
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = `repeat(${weeks}, 1fr)`;
+    grid.style.gap = '1px';
+    grid.style.width = '100%';
+    // Highlight end
+    // Highlight start: Append labels and grid to container
+    gridWithDays.appendChild(dayLabels);
+    gridWithDays.appendChild(grid);
+    gridContainer.innerHTML = '';
+    gridContainer.appendChild(monthLabels);
+    gridContainer.appendChild(gridWithDays);
+    // Highlight end
 
     document.getElementById('totalDays').textContent = totalDays;
 }
