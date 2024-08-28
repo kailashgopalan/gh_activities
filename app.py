@@ -167,9 +167,14 @@ def get_habit_data(user_id):
             dates.append(activity.date.strftime('%Y-%m-%d'))
             hours.append(float(activity.total_hours))
         
+        # Calculate total hours for this habit
+        total_hours = sum(hours)
+
         habit_data[habit.name] = {
+            'id': habit.id,
             'dates': dates,
-            'hours': hours
+            'hours': hours,
+            'total_hours': total_hours
         }
     
     return habit_data

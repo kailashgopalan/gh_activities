@@ -82,6 +82,7 @@
 
         {% for habit in habits %}
             <div id="chart{{ habit.id }}" class="tabcontent">
+                <div id="totalHours{{ habit.id }}"></div>
                 <canvas id="summaryChart{{ habit.id }}"></canvas>
             </div>
         {% endfor %}

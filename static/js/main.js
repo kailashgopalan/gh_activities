@@ -218,6 +218,17 @@ function updateCharts(habitData) {
         const chartId = `summaryChart${data.id}`;
         const ctx = document.getElementById(chartId).getContext('2d');
         
+        // Create or update the total hours display
+        const totalHoursId = `totalHours${data.id}`;
+        let totalHoursElement = document.getElementById(totalHoursId);
+        if (!totalHoursElement) {
+            totalHoursElement = document.createElement('p');
+            totalHoursElement.id = totalHoursId;
+            ctx.canvas.parentNode.insertBefore(totalHoursElement, ctx.canvas);
+        }
+
+        totalHoursElement.textContent = `Total Hours: ${data.total_hours.toFixed(1)}`;
+
         if (window.chartInstances && window.chartInstances[chartId]) {
             window.chartInstances[chartId].destroy();
         }
@@ -239,6 +250,12 @@ function updateCharts(habitData) {
                 scales: {
                     y: {
                         beginAtZero: true
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: `${habitName} - Daily Hours`
                     }
                 }
             }

@@ -40,10 +40,13 @@ h1, h2 {
     background-color: #ccc;
 }
 .tabcontent {
-    display: none;
-    padding: 6px 12px;
-    border: 1px solid #ccc;
-    border-top: none;
+    padding: 20px;
+}
+.tabcontent > div {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
 }
 .activity-table {
     width: 100%;
@@ -218,5 +221,5 @@ canvas {
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     max-width: 300px;
     left: 0; /* Add this */
-    bottom: -80px; /* Adjust as needed */
+    bottom: -60px; /* Adjust as needed */
 }
