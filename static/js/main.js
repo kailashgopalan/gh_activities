@@ -175,6 +175,7 @@ function refreshData() {
     })
     .catch(error => console.error('Error refreshing data:', error));
 }
+
 function createActivityGrid(gridData) {
     const gridContainer = document.querySelector('.activity-grid-container');
     gridContainer.innerHTML = ''; // Clear existing content
@@ -182,7 +183,7 @@ function createActivityGrid(gridData) {
     const monthLabels = document.createElement('div');
     monthLabels.className = 'month-labels';
     monthLabels.style.display = 'flex';
-    monthLabels.style.marginLeft = '30px'; // Space for day labels
+    monthLabels.style.marginLeft = '25px'; // Space for day labels
 
     const gridWithDays = document.createElement('div');
     gridWithDays.style.display = 'flex';
@@ -191,18 +192,25 @@ function createActivityGrid(gridData) {
     dayLabels.className = 'day-labels';
     dayLabels.style.display = 'flex';
     dayLabels.style.flexDirection = 'column';
-    dayLabels.style.width = '30px';
-    dayLabels.style.marginRight = '4px';
+    dayLabels.style.width = '20px';
+    dayLabels.style.marginRight = '5px';
 
     const grid = document.createElement('div');
     grid.id = 'activityGrid';
     grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(53, 30px)';
-    grid.style.gap = '4px';
+    grid.style.gridTemplateColumns = 'repeat(53, 1fr)';
+    grid.style.gap = '1px';
 
     const tooltip = document.createElement('div');
     tooltip.className = 'tooltip';
     tooltip.style.display = 'none';
+    tooltip.style.position = 'absolute';
+    tooltip.style.backgroundColor = 'white';
+    tooltip.style.border = '1px solid #ddd';
+    tooltip.style.padding = '5px';
+    tooltip.style.borderRadius = '3px';
+    tooltip.style.fontSize = '12px';
+    tooltip.style.zIndex = '1000';
     
     let totalDays = 0;
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -236,7 +244,7 @@ function createActivityGrid(gridData) {
                 currentMonth = cellDate.getMonth();
                 const monthLabel = document.createElement('div');
                 monthLabel.textContent = months[currentMonth];
-                monthLabel.style.width = `${30 * 4}px`; // Adjust width based on cell size and desired span
+                monthLabel.style.width = `${100 / 12}%`; // Approximate month width
                 monthLabels.appendChild(monthLabel);
             }
 
@@ -253,11 +261,11 @@ function createActivityGrid(gridData) {
     days.forEach(day => {
         const dayLabel = document.createElement('div');
         dayLabel.textContent = day;
-        dayLabel.style.height = '30px';
+        dayLabel.style.height = '15px';
         dayLabel.style.display = 'flex';
         dayLabel.style.alignItems = 'center';
         dayLabel.style.justifyContent = 'center';
-        dayLabel.style.fontSize = '12px';
+        dayLabel.style.fontSize = '9px';
         dayLabels.appendChild(dayLabel);
     });
 
@@ -267,14 +275,13 @@ function createActivityGrid(gridData) {
             const day = gridArray[weekIndex][dayOfWeek];
             const cell = document.createElement('div');
             cell.className = 'activity-cell';
-            cell.style.width = '30px';
-            cell.style.height = '30px';
-            cell.style.border = '1px solid #fff';
+            cell.style.width = '100%';
+            cell.style.paddingBottom = '100%'; // Make cell square
+            cell.style.position = 'relative';
 
             const cellDate = new Date(day.date);
             if (cellDate > currentDate) {
                 cell.style.backgroundColor = '#ffffff'; // White for future dates
-                cell.style.cursor = 'default';
             } else if (day.hours > 0) {
                 const intensity = Math.min(day.hours / 5, 1);
                 cell.style.backgroundColor = `rgba(0, 128, 0, ${intensity})`;
@@ -285,7 +292,25 @@ function createActivityGrid(gridData) {
 
             if (cellDate <= currentDate) {
                 cell.addEventListener('mouseover', (e) => {
-                    // ... (tooltip logic, unchanged)
+                    const rect = e.target.getBoundingClientRect();
+                    const containerRect = gridContainer.getBoundingClientRect();
+
+                    tooltip.style.left = `${rect.left - containerRect.left}px`;
+                    tooltip.style.top = `${containerRect.bottom + window.scrollY + 10}px`;
+
+                    const habitSummary = day.summary.reduce((acc, activity) => {
+                        const [habit, hours] = activity.split(': ');
+                        acc[habit] = (acc[habit] || 0) + parseFloat(hours);
+                        return acc;
+                    }, {});
+
+                    let tooltipContent = `<strong>${day.date}</strong><br>Total Hours: ${day.hours.toFixed(1)}<br><br>`;
+                    for (const [habit, hours] of Object.entries(habitSummary)) {
+                        tooltipContent += `${habit}: ${hours.toFixed(1)} hours<br>`;
+                    }
+
+                    tooltip.innerHTML = tooltipContent;
+                    tooltip.style.display = 'block';
                 });
 
                 cell.addEventListener('mouseout', () => {
