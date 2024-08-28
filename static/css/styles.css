@@ -192,10 +192,10 @@ canvas {
 /* Existing styles */
 
 .activity-grid-container {
-    position: relative; /* Add this */
-    border: 2px solid black;
-    overflow-x: auto;
-    margin-bottom: 20px;
+    max-width: 1000px; /* Adjust as needed */
+    margin: 20px auto;
+    padding: 10px;
+    border: 1px solid #ddd;
 }
 
 .month-labels {
