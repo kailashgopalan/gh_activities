@@ -198,6 +198,17 @@ canvas {
     margin-bottom: 20px;
 }
 
+.month-labels {
+    font-size: 12px;
+    color: #767676;
+    margin-bottom: 4px;
+}
+
+.day-labels {
+    font-size: 12px;
+    color: #767676;
+}
+
 .activity-grid {
     display: grid;
     grid-template-columns: repeat(53, 1fr);
