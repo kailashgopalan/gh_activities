@@ -71,16 +71,12 @@ class Activity(db.Model):
     hours = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(255))  # Add this line
     date = db.Column(db.Date, nullable=False)
-
     habit = db.relationship('Habit', backref='activities')
 
 def init_db():
     with app.app_context():
         db.drop_all()
         db.create_all()
-
-def get_habits(user_id):
-    return Habit.query.filter_by(user_id=user_id).all()
 
 def add_habit(user_id, habit_name):
     emoji = generate_emoji(habit_name)
@@ -101,6 +97,14 @@ def generate_emoji(habit_name):
     except Exception as e:
         print(f"Error in emoji generation: {e}")
         return "😊"  # Default emoji if generation fails
+    
+def get_habits(user_id):
+    return Habit.query.filter_by(user_id=user_id).all()
+
+def add_activity(user_id, habit_id, date, description, hours):
+    new_activity = Activity(user_id=user_id, habit_id=habit_id, date=date, description=description, hours=hours)
+    db.session.add(new_activity)
+    db.session.commit()
 
 def classify_activity(activity_description, user_habits):
     habit_names = [habit.name for habit in user_habits]
@@ -121,11 +125,6 @@ def classify_activity(activity_description, user_habits):
     except Exception as e:
         print(f"Error in classification: {e}")
         return None
-
-def add_activity(user_id, habit_id, date, description, hours):
-    new_activity = Activity(user_id=user_id, habit_id=habit_id, date=date, description=description, hours=hours)
-    db.session.add(new_activity)
-    db.session.commit()
 
 def get_activities(user_id, date):
     return Activity.query.filter_by(user_id=user_id, date=date).all()
@@ -254,9 +253,6 @@ def get_activities_for_date(date):
         'emoji': activity.habit.emoji or "😊",
         'hours': activity.hours
     } for activity in activities])
-
-from flask import request, jsonify
-from datetime import datetime
 
 @app.route('/add_activity', methods=['POST'])
 @login_required
@@ -405,7 +401,6 @@ def admin_query():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
 @app.errorhandler(403)
 def forbidden(e):
     return render_template('403.html'), 403
@@ -416,9 +411,5 @@ def init_db_command():
     print("Initialized the database.")
 
 
-#if __name__ == '__main__':
-#    port = int(os.environ.get("PORT", 5000))
-#    app.run(host='0.0.0.0', port=port)
-# At the end of your app.py file
 if __name__ == '__main__':
     app.run(debug=True)
