@@ -47,9 +47,7 @@ function updateActivityLog(activities) {
                     <button onclick="showEditForm(${activity.id})">Edit</button>
                     <button onclick="deleteActivity(${activity.id})">Delete</button>
                     <form id="editForm${activity.id}" class="edit-form" onsubmit="return updateActivity(${activity.id})">
-                        <select name="habit_id" required>
-                            ${habits.map(h => `<option value="${h.id}" ${h.id === activity.habit_id ? 'selected' : ''}>${h.emoji} ${h.name}</option>`).join('')}
-                        </select>
+                        <select name="habit_id" required></select>
                         <input type="text" name="description" value="${activity.description}" required>
                         <input type="number" name="hours" value="${activity.hours}" step="0.1" min="0" required>
                         <button type="submit">Save</button>
