@@ -194,12 +194,14 @@ canvas {
     display: grid;
     grid-template-columns: repeat(53, 1fr);
     gap: 1px;
+    min-width: 1060px; /* 53 cells * (15px width + 1px gap) */
     background-color: #161414;
 }
 
 .activity-cell {
     width: 9px; /* Reduced from 10px to account for borders */
     height: 9px; /* Reduced from 10px to account for borders */
+    border: 1px solid #ccc;
     background-color: #ebedf0;
     display: inline-block;
     margin: 0;
@@ -216,7 +218,7 @@ canvas {
 }
 
 .tooltip {
-    position: absolute;
+    position: fixed;
     background-color: #f9f9f9;
     border: 2px solid #333;
     padding: 10px;
@@ -226,4 +228,5 @@ canvas {
     z-index: 1000;
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     color: #333;
+    max-width: 300px;
 }
