@@ -91,7 +91,6 @@
             {{ habits|tojson|safe }}
         </script>
     {% endif %}
-    {% else %}
         <p>Please <a href="{{ url_for('login') }}">login</a> to use the Activity Tracker.</p>
     {% endif %}
 </body>
