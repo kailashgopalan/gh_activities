@@ -184,31 +184,32 @@ function createActivityGrid(gridData) {
 
     grid.innerHTML = '';
     
-    // Calculate the number of weeks
-    const weeks = Math.ceil(gridData.length / 7);
-    
     // Sort gridData by date
     gridData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    // Calculate the number of weeks
+    const weeks = Math.ceil(gridData.length / 7);
+    
     // Create a 2D array to represent the grid (weeks x 7 days)
     const gridArray = Array(weeks).fill().map(() => Array(7).fill(null));
 
     // Fill the gridArray with data
-    let weekIndex = 0;
-    let dayIndex = new Date(gridData[0].date).getDay(); // Start with the correct day of week
-    
-    gridData.forEach(day => {
-        gridArray[weekIndex][dayIndex] = day;
-        dayIndex++;
-        if (dayIndex === 7) {
-            dayIndex = 0;
-            weekIndex++;
+    let dayIndex = 0;
+    for (let weekIndex = 0; weekIndex < weeks; weekIndex++) {
+        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+            if (dayIndex < gridData.length) {
+                gridArray[weekIndex][dayOfWeek] = gridData[dayIndex];
+                dayIndex++;
+            } else {
+                break;
+            }
         }
-    });
+    }
 
-// Create activity cells
-    gridArray.forEach(week => {
-        week.forEach(day => {
+    // Create activity cells
+    for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+        for (let weekIndex = 0; weekIndex < weeks; weekIndex++) {
+            const day = gridArray[weekIndex][dayOfWeek];
             const cell = document.createElement('div');
             cell.className = 'activity-cell';
             cell.style.width = '30px';
@@ -263,8 +264,8 @@ function createActivityGrid(gridData) {
             }
 
             grid.appendChild(cell);
-        });
-    });
+        }
+    }
 
     document.getElementById('totalDays').textContent = totalDays;
 }
