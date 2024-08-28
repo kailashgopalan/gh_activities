@@ -174,7 +174,7 @@ function createActivityGrid(gridData) {
 
         cell.addEventListener('mouseover', (e) => {
             const rect = e.target.getBoundingClientRect();
-            const gridRect = grid.getBoundingClientRect();
+            const containerRect = gridContainer.getBoundingClientRect();
 
             // Calculate position relative to the grid container
             let left = rect.left - containerRect.left + gridContainer.scrollLeft;
