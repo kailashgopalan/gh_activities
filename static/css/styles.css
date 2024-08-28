@@ -90,16 +90,6 @@ input[type="text"], input[type="number"], select, button {
 .date-nav button {
     padding: 5px 10px;
 }
-.activity-grid-container {
-    border: 2px solid black;
-}
-.activity-cell {
-    width: 30px;
-    height: 30px;
-    display: inline-block;
-    background-color: #ebedf0;
-    border: 1px solid #fff;
-}
 
 .container {
     max-width: 1200px;
@@ -192,10 +182,10 @@ canvas {
 /* Existing styles */
 
 .activity-grid-container {
-    max-width: 1000px; /* Adjust as needed */
-    margin: 20px auto;
-    padding: 10px;
-    border: 1px solid #ddd;
+    position: relative; /* Add this */
+    border: 2px solid black;
+    overflow-x: auto;
+    margin-bottom: 20px;
 }
 
 .month-labels {
