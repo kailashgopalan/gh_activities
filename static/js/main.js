@@ -151,11 +151,21 @@ function createActivityGrid(gridData) {
     let totalDays = 0;
 
     grid.innerHTML = '';
-
+    
+    // Calculate the number of weeks
+    const weeks = Math.ceil(gridData.length / 7);
+    
     gridData.forEach((day, index) => {
         const cell = document.createElement('div');
         cell.className = 'activity-cell';
-        
+        // Set default background color
+        cell.style.width = '30px';
+        cell.style.height = '30px';
+        cell.style.display = 'inline-block';
+        cell.style.backgroundColor = '#ebedf0';
+        cell.style.border = '1px solid #fff';  
+        cell.style.cursor = 'pointer';
+
         if (day.hours > 0) {
             const intensity = Math.min(day.hours / 5, 1);
             cell.style.backgroundColor = `rgba(0, 128, 0, ${intensity})`;
@@ -172,6 +182,7 @@ function createActivityGrid(gridData) {
             if (left + 220 > gridRect.width) {
                 left = gridRect.width - 225;
             }
+
             tooltip.style.left = `${left}px`;
             tooltip.style.top = `${top}px`;
 
@@ -188,6 +199,7 @@ function createActivityGrid(gridData) {
 
             tooltip.innerHTML = tooltipContent;
             tooltip.style.display = 'block';
+            tooltip.style.border = '1px solid #333';
         });
 
         cell.addEventListener('mouseout', () => {
