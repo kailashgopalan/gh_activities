@@ -183,7 +183,7 @@ function createActivityGrid(gridData) {
     const monthLabels = document.createElement('div');
     monthLabels.className = 'month-labels';
     monthLabels.style.display = 'flex';
-    monthLabels.style.marginLeft = '25px'; // Space for day labels
+    monthLabels.style.marginLeft = '30px'; // Space for day labels
 
     const gridWithDays = document.createElement('div');
     gridWithDays.style.display = 'flex';
@@ -192,25 +192,13 @@ function createActivityGrid(gridData) {
     dayLabels.className = 'day-labels';
     dayLabels.style.display = 'flex';
     dayLabels.style.flexDirection = 'column';
-    dayLabels.style.width = '20px';
-    dayLabels.style.marginRight = '5px';
+    dayLabels.style.width = '30px';
+    dayLabels.style.marginRight = '4px';
 
     const grid = document.createElement('div');
     grid.id = 'activityGrid';
-    grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(53, 1fr)';
-    grid.style.gap = '1px';
 
-    const tooltip = document.createElement('div');
-    tooltip.className = 'tooltip';
-    tooltip.style.display = 'none';
-    tooltip.style.position = 'absolute';
-    tooltip.style.backgroundColor = 'white';
-    tooltip.style.border = '1px solid #ddd';
-    tooltip.style.padding = '5px';
-    tooltip.style.borderRadius = '3px';
-    tooltip.style.fontSize = '12px';
-    tooltip.style.zIndex = '1000';
+    const tooltip = document.getElementById('tooltip');
     
     let totalDays = 0;
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -221,10 +209,10 @@ function createActivityGrid(gridData) {
 
     // Get current date
     const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
 
     // Calculate the number of weeks
-    const weeks = 53; // Always create a full year of cells
+    const weeks = Math.ceil(365 / 7); // Always create a full year of cells
     
     // Create a 2D array to represent the grid (weeks x 7 days)
     const gridArray = Array(weeks).fill().map(() => Array(7).fill(null));
@@ -244,7 +232,7 @@ function createActivityGrid(gridData) {
                 currentMonth = cellDate.getMonth();
                 const monthLabel = document.createElement('div');
                 monthLabel.textContent = months[currentMonth];
-                monthLabel.style.width = `${100 / 12}%`; // Approximate month width
+                monthLabel.style.width = `${30 * 4}px`; // Adjust width based on cell size
                 monthLabels.appendChild(monthLabel);
             }
 
@@ -260,12 +248,11 @@ function createActivityGrid(gridData) {
     // Add day labels
     days.forEach(day => {
         const dayLabel = document.createElement('div');
-        dayLabel.textContent = day;
-        dayLabel.style.height = '15px';
+        dayLabel.textContent = day[0]; // Just the first letter
+        dayLabel.style.height = '30px';
         dayLabel.style.display = 'flex';
         dayLabel.style.alignItems = 'center';
         dayLabel.style.justifyContent = 'center';
-        dayLabel.style.fontSize = '9px';
         dayLabels.appendChild(dayLabel);
     });
 
@@ -275,19 +262,22 @@ function createActivityGrid(gridData) {
             const day = gridArray[weekIndex][dayOfWeek];
             const cell = document.createElement('div');
             cell.className = 'activity-cell';
-            cell.style.width = '100%';
-            cell.style.paddingBottom = '100%'; // Make cell square
-            cell.style.position = 'relative';
+            cell.style.width = '30px';
+            cell.style.height = '30px';
+            cell.style.display = 'inline-block';
+            cell.style.border = '1px solid #fff';
+            cell.style.cursor = 'pointer';
 
             const cellDate = new Date(day.date);
             if (cellDate > currentDate) {
-                cell.style.backgroundColor = '#ffffff'; // White for future dates
+                cell.style.backgroundColor = '#ffffff';
+                cell.style.cursor = 'default';
             } else if (day.hours > 0) {
                 const intensity = Math.min(day.hours / 5, 1);
                 cell.style.backgroundColor = `rgba(0, 128, 0, ${intensity})`;
                 totalDays++;
             } else {
-                cell.style.backgroundColor = '#ebedf0'; // Original color for days with no activity
+                cell.style.backgroundColor = '#ebedf0';
             }
 
             if (cellDate <= currentDate) {
@@ -295,8 +285,14 @@ function createActivityGrid(gridData) {
                     const rect = e.target.getBoundingClientRect();
                     const containerRect = gridContainer.getBoundingClientRect();
 
-                    tooltip.style.left = `${rect.left - containerRect.left}px`;
-                    tooltip.style.top = `${containerRect.bottom + window.scrollY + 10}px`;
+                    let left = rect.left - containerRect.left + gridContainer.scrollLeft;
+                    if (left + 300 > containerRect.width) {
+                        left = containerRect.width - 300;
+                    }
+
+                    tooltip.style.left = `${left}px`;
+                    tooltip.style.bottom = '200px';
+                    tooltip.style.top = 'auto';
 
                     const habitSummary = day.summary.reduce((acc, activity) => {
                         const [habit, hours] = activity.split(': ');
@@ -326,7 +322,6 @@ function createActivityGrid(gridData) {
     gridWithDays.appendChild(grid);
     gridContainer.appendChild(monthLabels);
     gridContainer.appendChild(gridWithDays);
-    gridContainer.appendChild(tooltip);
 
     document.getElementById('totalDays').textContent = totalDays;
 }
