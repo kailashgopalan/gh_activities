@@ -74,21 +74,19 @@ function groupActivitiesByHabit(activities) {
 }
 
 function showEditForm(activityId) {
-    function showEditForm(activityId) {
-        const form = document.getElementById(`editForm${activityId}`);
-        if (form) {
-            // Ensure the habit dropdown is populated
-            const habitSelect = form.querySelector('select[name="habit_id"]');
-            if (habitSelect && habitSelect.options.length === 0) {
-                habits.forEach(habit => {
-                    const option = document.createElement('option');
-                    option.value = habit.id;
-                    option.textContent = `${habit.emoji} ${habit.name}`;
-                    habitSelect.appendChild(option);
-                });
-            }
-            form.style.display = 'block';
+    const form = document.getElementById(`editForm${activityId}`);
+    if (form) {
+        // Ensure the habit dropdown is populated
+        const habitSelect = form.querySelector('select[name="habit_id"]');
+        if (habitSelect && habitSelect.options.length === 0) {
+            habits.forEach(habit => {
+                const option = document.createElement('option');
+                option.value = habit.id;
+                option.textContent = `${habit.emoji} ${habit.name}`;
+                habitSelect.appendChild(option);
+            });
         }
+        form.style.display = 'block';
     }
 }
 
@@ -96,11 +94,10 @@ function hideEditForm(activityId) {
     document.getElementById(`editForm${activityId}`).style.display = 'none';
 }
 
-function updateActivity(activityId) {
+function updateActivity(event, activityId) {
+    event.preventDefault();
     const form = document.getElementById(`editForm${activityId}`);
-    const habit_id = form.elements['habit_id'].value;
-    const description = form.elements['description'].value;
-    const hours = form.elements['hours'].value;
+    const formData = new FormData(form);
 
     fetch(`/update_activity/${activityId}`, {
         method: 'POST',
