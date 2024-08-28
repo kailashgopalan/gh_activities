@@ -176,15 +176,8 @@ function createActivityGrid(gridData) {
             const rect = e.target.getBoundingClientRect();
             const gridRect = grid.getBoundingClientRect();
 
-            let left = rect.left - gridRect.left + grid.scrollLeft;
-            let top = rect.bottom - gridRect.top + grid.scrollTop + 5;
-
-            if (left + 220 > gridRect.width) {
-                left = gridRect.width - 225;
-            }
-
-            tooltip.style.left = `${left}px`;
-            tooltip.style.top = `${top}px`;
+            tooltip.style.left = `${rect.left}px`;
+            tooltip.style.top = `${gridRect.bottom + window.scrollY + 10}px`; // Position below the grid
 
             const habitSummary = day.summary.reduce((acc, activity) => {
                 const [habit, hours] = activity.split(': ');
@@ -193,6 +186,7 @@ function createActivityGrid(gridData) {
             }, {});
 
             let tooltipContent = `<strong>${day.date}</strong><br>Total Hours: ${day.hours.toFixed(1)}<br><br>`;
+            
             for (const [habit, hours] of Object.entries(habitSummary)) {
                 tooltipContent += `${habit}: ${hours.toFixed(1)} hours<br>`;
             }

@@ -182,12 +182,9 @@ canvas {
 /* Existing styles */
 
 .activity-grid-container {
-    border: 1px solid #ccc;
-    padding: 5px;
-    margin: 10px 0;
+    border: 2px solid black;
     overflow-x: auto;
-    width: 100%;
-    max-width: 800px; /* Adjust this value as needed */
+    margin-bottom: 20px;
 }
 
 .activity-grid {
@@ -195,19 +192,12 @@ canvas {
     grid-template-columns: repeat(53, 1fr);
     gap: 1px;
     min-width: 1060px; /* 53 cells * (15px width + 1px gap) */
-    background-color: #161414;
 }
 
 .activity-cell {
-    width: 9px; /* Reduced from 10px to account for borders */
-    height: 9px; /* Reduced from 10px to account for borders */
+    width: 15px;
+    height: 15px;
     border: 1px solid #ccc;
-    background-color: #ebedf0;
-    display: inline-block;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    border:1px solid #100f0f; /* Thinner border to maintain overall size */
 }
 
 .activity-cell:hover {
@@ -219,14 +209,11 @@ canvas {
 
 .tooltip {
     position: fixed;
-    background-color: #f9f9f9;
-    border: 2px solid #333;
+    background-color: #fff;
+    border: 1px solid #333;
     padding: 10px;
-    border-radius: 6px;
-    font-size: 6px;
     display: none;
     z-index: 1000;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    color: #333;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     max-width: 300px;
 }
