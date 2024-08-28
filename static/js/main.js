@@ -192,29 +192,26 @@ function createActivityGrid(gridData) {
     currentDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
 
     // Calculate the number of weeks
-    const weeks = Math.ceil(gridData.length / 7);
+    const weeks = Math.ceil(365 / 7); // Always create a full year of cells
     
     // Create a 2D array to represent the grid (weeks x 7 days)
     const gridArray = Array(weeks).fill().map(() => Array(7).fill(null));
 
     // Fill the gridArray with data
     let dayIndex = 0;
+    const startDate = new Date(gridData[0].date);
     for (let weekIndex = 0; weekIndex < weeks; weekIndex++) {
         for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
-            if (dayIndex < gridData.length) {
-                const cellDate = new Date(gridData[dayIndex].date);
-                if (cellDate <= currentDate) {
-                    gridArray[weekIndex][dayOfWeek] = gridData[dayIndex];
-                    dayIndex++;
-                } else {
-                    // Stop populating if we've reached the current date
-                    break;
-                }
+            const cellDate = new Date(startDate);
+            cellDate.setDate(startDate.getDate() + (weekIndex * 7 + dayOfWeek));
+            
+            if (cellDate <= currentDate && dayIndex < gridData.length) {
+                gridArray[weekIndex][dayOfWeek] = gridData[dayIndex];
+                dayIndex++;
             } else {
-                break;
+                gridArray[weekIndex][dayOfWeek] = { date: cellDate, hours: 0, summary: [] };
             }
         }
-        if (dayIndex >= gridData.length) break;
     }
 
     // Create activity cells
@@ -226,17 +223,23 @@ function createActivityGrid(gridData) {
             cell.style.width = '30px';
             cell.style.height = '30px';
             cell.style.display = 'inline-block';
-            cell.style.backgroundColor = '#ebedf0';
-            cell.style.border = '1px solid #fff';  
+            cell.style.border = '1px solid #fff';
             cell.style.cursor = 'pointer';
 
-            if (day) {
-                if (day.hours > 0) {
-                    const intensity = Math.min(day.hours / 5, 1);
-                    cell.style.backgroundColor = `rgba(0, 128, 0, ${intensity})`;
-                    totalDays++;
-                }
+            const cellDate = new Date(day.date);
+            if (cellDate > currentDate) {
+                // Style for future dates
+                cell.style.backgroundColor = '#f0f0f0'; // Lighter gray for future dates
+                cell.style.cursor = 'default';
+            } else if (day.hours > 0) {
+                const intensity = Math.min(day.hours / 5, 1);
+                cell.style.backgroundColor = `rgba(0, 128, 0, ${intensity})`;
+                totalDays++;
+            } else {
+                cell.style.backgroundColor = '#ebedf0'; // Original color for days with no activity
+            }
 
+            if (cellDate <= currentDate) {
                 cell.addEventListener('mouseover', (e) => {
                     const rect = e.target.getBoundingClientRect();
                     const containerRect = gridContainer.getBoundingClientRect();
