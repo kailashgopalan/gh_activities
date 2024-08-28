@@ -179,6 +179,10 @@ function refreshData() {
 function createActivityGrid(gridData) {
     const grid = document.getElementById('activityGrid');
     const gridContainer = document.querySelector('.activity-grid-container');
+    // Update the gridContainer style
+    gridContainer.style.maxWidth = '900px'; // Adjust this value as needed
+    gridContainer.style.margin = '0 auto'; // Center the grid
+    
     const tooltip = document.getElementById('tooltip');
     let totalDays = 0;
 
@@ -192,13 +196,17 @@ function createActivityGrid(gridData) {
  
      const dayLabels = document.createElement('div');
      dayLabels.className = 'day-labels';
-     dayLabels.style.display = 'flex';
+     dayLabels.style.display = 'grid';
+     dayLabels.style.gridTemplateRows = 'repeat(7, 1fr)';
+     dayLabels.style.gap = '1px';
+     dayLabels.style.height = 'auto'; // Allow it to fill the height
      dayLabels.style.flexDirection = 'column';
      dayLabels.style.width = '30px';
      dayLabels.style.marginRight = '4px';
  
      const gridWithDays = document.createElement('div');
      gridWithDays.style.display = 'flex';
+     gridWithDays.style.width = '100%';
  
      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -338,11 +346,13 @@ function createActivityGrid(gridData) {
     }
 
     // Highlight start
+    // Replace the existing grid style settings with these
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = `repeat(${weeks}, 1fr)`;
     grid.style.gap = '1px';
-    grid.style.width = '100%';
+    grid.style.width = 'calc(100% - 30px)'; // Subtract the width of day labels
     // Highlight end
+    
     // Highlight start: Append labels and grid to container
     gridWithDays.appendChild(dayLabels);
     gridWithDays.appendChild(grid);
