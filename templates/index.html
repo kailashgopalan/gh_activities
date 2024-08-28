@@ -91,6 +91,16 @@
         <script id="habits-data" type="application/json">
             {{ habits_json|safe }}
         </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const habitsDataElement = document.getElementById('habits-data');
+                if (habitsDataElement) {
+                    console.log('Habits data from HTML:', habitsDataElement.textContent);
+                } else {
+                    console.error('Habits data element not found in HTML');
+                }
+            });
+        </script>
     {% else %}
         <p>Please <a href="{{ url_for('login') }}">login</a> to use the Activity Tracker.</p>
     {% endif %}

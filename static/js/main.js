@@ -6,6 +6,7 @@ const habitsDataElement = document.getElementById('habits-data');
 if (habitsDataElement) {
     try {
         habits = JSON.parse(habitsDataElement.textContent);
+        console.log('Habits loaded:', habits);
     } catch (error) {
         console.error('Error parsing habits data:', error);
     }
