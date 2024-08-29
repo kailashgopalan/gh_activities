@@ -11,7 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from functools import wraps
 import os
 from openai import OpenAI
-from sqlalchemy import func, cast, String, text
+from sqlalchemy import func, cast, String, text, case
 
 load_dotenv()
 
@@ -324,19 +324,36 @@ def update_activity(activity_id):
 def activity_grid_data():
     end_date = datetime.now().date()
     start_date = end_date - timedelta(days=364)
-    
-    activities = db.session.query(
-        Activity.date,
-        func.sum(Activity.hours).label('total_hours'),
-        func.string_agg(
-            Habit.name + ': ' + cast(Activity.hours, String) + ' hours',
-            ', '
-        ).label('summary')
-    ).join(Habit).filter(
-        Activity.user_id == session['user_id'],
-        Activity.date >= start_date,
-        Activity.date <= end_date
-    ).group_by(Activity.date).all()
+    if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql'):
+        activities = db.session.query(
+            Activity.date,
+            func.sum(Activity.hours).label('total_hours'),
+            func.string_agg(
+                Habit.name + ': ' + cast(Activity.hours, String) + ' hours',
+                ', '
+            ).label('summary')
+        ).join(Habit).filter(
+            Activity.user_id == session['user_id'],
+            Activity.date >= start_date,
+            Activity.date <= end_date
+        ).group_by(Activity.date).all()
+    else:
+        # SQLite query
+        activities = db.session.query(
+            Activity.date,
+            func.sum(Activity.hours).label('total_hours'),
+            func.group_concat(
+                case(
+                    (Activity.hours != None, Habit.name + ': ' + cast(Activity.hours, String) + ' hours'),
+                    else_=''
+                ),
+                ', '
+            ).label('summary')
+        ).join(Habit).filter(
+            Activity.user_id == session['user_id'],
+            Activity.date >= start_date,
+            Activity.date <= end_date
+        ).group_by(Activity.date).all()
     
     activity_dict = {a.date: {'hours': float(a.total_hours), 'summary': a.summary.split(',')} for a in activities}
     
